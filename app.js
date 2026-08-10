@@ -75,6 +75,12 @@ const OBLIGATIONS = {
     note: "Leg vast hoe de gegevens beveiligd zijn en wie er bij mag, passend bij gezondheidsgegevens.",
     askAt: "eigen organisatie",
   },
+  fgVerplicht: {
+    theme: "privacy",
+    title: "Nagaan of een FG verplicht is",
+    note: "Bij grootschalige verwerking van gezondheidsgegevens is een FG wettelijk verplicht. Vuistregel van de Autoriteit Persoonsgegevens voor huisartsenpraktijken: meer dan 10.000 patiënten.",
+    askAt: "eigen organisatie",
+  },
   doorgiftetoets: {
     theme: "privacy",
     title: "Doorgiftetoets uitvoeren",
@@ -203,7 +209,7 @@ const QUESTIONS = [
     type: "single",
     options: [
       { value: "ja", label: "Ja",
-        grants: ["dpiaToets", "dpiaVolledig", "beveiligingToegang"] },
+        grants: ["dpiaToets", "dpiaVolledig", "beveiligingToegang", "fgVerplicht"] },
       { value: "nee", label: "Nee", grants: [] },
     ],
   },
@@ -296,7 +302,10 @@ const DPIA_TEMPLATE = {
     "voorzet op basis van de intake-checklist, geen ingevulde DPIA. De " +
     "beoordeling van risico's en maatregelen vraagt om een inhoudelijk oordeel " +
     "van de praktijk, samen met de functionaris gegevensbescherming (FG). " +
-    "Heeft de organisatie geen FG, betrek dan een externe privacyadviseur.",
+    "Heeft de organisatie geen FG, betrek dan een externe privacyadviseur. Ga " +
+    "daarbij ook na of een FG verplicht is: bij grootschalige verwerking van " +
+    "gezondheidsgegevens is dat wettelijk vereist, met als vuistregel van de " +
+    "Autoriteit Persoonsgegevens voor huisartsenpraktijken meer dan 10.000 patiënten.",
   sections: [
     {
       nr: 1, title: "Voorstel",
