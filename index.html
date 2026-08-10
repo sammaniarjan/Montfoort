@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Publieke intake-checklist voor AI- en softwaretools in de zorg. Bepaal wat je moet regelen voordat een tool in gebruik gaat en in het AI-register komt. Geen opslag, geen verzending.">
+  <title>AI-intakechecklist voor de zorg</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Direct naar de inhoud</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <p class="eyebrow">AI-intakechecklist</p>
+      <h1>Wat moet je regelen voordat je een AI- of softwaretool gebruikt?</h1>
+    </div>
+  </header>
+
+  <main id="main" class="wrap" tabindex="-1">
+
+    <!-- ============ STARTSCHERM ============ -->
+    <section id="screen-start" class="screen card" aria-labelledby="start-title">
+      <h2 id="start-title">Beoordeel één tool in zeven vragen</h2>
+      <p class="lede">
+        Beantwoord zeven korte vragen over één tool. Je krijgt een concrete lijst
+        met wat je moet regelen — vertaald naar taal die je meteen kunt gebruiken.
+        Dit is geen juridisch oordeel; het bepaalt wat er geregeld moet worden.
+      </p>
+
+      <div class="privacy-note" role="note">
+        <strong>Niets wordt opgeslagen of verzonden.</strong>
+        Al je antwoorden blijven in het geheugen van deze pagina, in je eigen browser.
+        Geen server, geen database, geen cookies, geen opslag. Ververs je de pagina,
+        dan is alles weg. We vragen nergens om persoons- of patiëntgegevens.
+      </div>
+
+      <form id="start-form" novalidate>
+        <p class="field-hint">Optioneel, alleen ter herkenning op je eindlijst:</p>
+        <div class="field">
+          <label for="tool-name">Naam van de tool</label>
+          <input type="text" id="tool-name" name="toolName" autocomplete="off"
+                 placeholder="Bijvoorbeeld: samenvattingsassistent">
+        </div>
+        <div class="field">
+          <label for="vendor-name">Leverancier</label>
+          <input type="text" id="vendor-name" name="vendorName" autocomplete="off"
+                 placeholder="Bijvoorbeeld: naam van het bedrijf">
+        </div>
+        <button type="submit" class="btn btn-primary">Start de checklist</button>
+      </form>
+    </section>
+
+    <!-- ============ VRAAGSCHERM ============ -->
+    <section id="screen-question" class="screen card" hidden aria-labelledby="q-title">
+      <div class="progress" aria-hidden="true">
+        <div class="progress-bar"><span id="progress-fill"></span></div>
+        <p class="progress-text" id="progress-text"></p>
+      </div>
+
+      <form id="question-form">
+        <fieldset>
+          <legend id="q-title" class="question-title"></legend>
+          <p id="q-help" class="question-help" hidden></p>
+          <div id="q-options" class="options" role="radiogroup" aria-labelledby="q-title"></div>
+          <div id="q-textwrap" class="field" hidden>
+            <label id="q-text-label" for="q-textinput"></label>
+            <input type="text" id="q-textinput" autocomplete="off">
+          </div>
+        </fieldset>
+
+        <div id="q-explanation" class="explanation" role="note" hidden></div>
+
+        <div class="nav">
+          <button type="button" id="btn-back" class="btn btn-ghost">Vorige</button>
+          <button type="submit" id="btn-next" class="btn btn-primary">Volgende</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ============ RESULTAATSCHERM ============ -->
+    <section id="screen-result" class="screen" hidden aria-labelledby="result-title">
+      <div class="card result-head">
+        <h2 id="result-title">Jouw checklist</h2>
+        <p id="result-subject" class="result-subject"></p>
+        <p id="result-conclusion" class="conclusion"></p>
+      </div>
+
+      <div id="result-flags" class="card flags" hidden>
+        <h3><span aria-hidden="true">■</span> Rode vlaggen — eerst uitzoeken</h3>
+        <ul id="flags-list" class="artefact-list"></ul>
+      </div>
+
+      <div id="result-groups"></div>
+
+      <div class="card actions no-print">
+        <button type="button" id="btn-copy" class="btn btn-primary">Kopieer naar klembord</button>
+        <button type="button" id="btn-print" class="btn btn-ghost">Print of sla op als PDF</button>
+        <button type="button" id="btn-restart" class="btn btn-ghost">Nieuwe tool beoordelen</button>
+        <span id="copy-status" class="copy-status" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p class="disclaimer" id="disclaimer-footer"></p>
+      <p class="attribution">Een hulpmiddel van <strong>Manava</strong> · advies over AI en compliance in de zorg</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
