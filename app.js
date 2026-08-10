@@ -462,7 +462,69 @@ const DPIA_TEMPLATE = {
 
 
 /* -------------------------------------------------------------------------
-   6. VASTE TEKSTEN
+   6. VOORBEELDPROFIELEN (startscherm)
+   Vooringevulde antwoorden als startpunt; de gebruiker loopt daarna alle
+   vragen gewoon na en kan alles aanpassen. Generieke categorieën, geen
+   productnamen. v5 staat bewust op "onbekend": dat dwingt tot navragen.
+   ------------------------------------------------------------------------- */
+const PROFILES = [
+  { label: "Schrijf- of samenvattingsassistent",
+    answers: { v1: "ja", v2: "ja", v3: "nee", v4: "nee", v5: "onbekend", v6: "nee" } },
+  { label: "Chatbot op de website",
+    answers: { v1: "ja", v2: "ja", v3: "nee", v4: "ja", v5: "onbekend", v6: "nee" } },
+  { label: "Triage- of risicoscore-tool",
+    answers: { v1: "ja", v2: "ja", v3: "ja", v4: "nee", v5: "onbekend", v6: "nee" } },
+];
+
+
+/* -------------------------------------------------------------------------
+   7. OPVRAAGBRIEF VOOR DE LEVERANCIER
+   Wordt aangeboden zodra minstens één actiepunt bij de leverancier ligt
+   (askAt: "leverancier"). De lijst met punten komt uit de intake zelf.
+   ------------------------------------------------------------------------- */
+const LETTER = {
+  subject: (ctx) => "Aanvraag documenten voor " + (ctx.toolName || "een AI-tool"),
+  aanhef: "Geachte heer of mevrouw,",
+  intro: (ctx) =>
+    "Onze organisatie bereidt de ingebruikname voor van " +
+    (ctx.toolName ? ctx.toolName : "een AI-tool") +
+    (ctx.vendorName ? " van " + ctx.vendorName : "") +
+    ". Onderdeel van onze intake is dat wij een aantal documenten en " +
+    "bevestigingen van u als leverancier ontvangen. Het gaat om de volgende punten:",
+  outro:
+    "Wij ontvangen deze stukken graag schriftelijk. Zonder deze informatie " +
+    "kunnen wij de tool niet in gebruik nemen. Alvast dank voor uw reactie.",
+  groet: "Met vriendelijke groet,",
+};
+
+
+/* -------------------------------------------------------------------------
+   8. REGISTERREGEL (CSV-download voor het AI-register)
+   Kolommen voor één regel in het AI-register, te plakken of te importeren
+   in Excel. Puntkomma als scheidingsteken (Nederlandse Excel-instelling).
+   ctx = { answers, toolName, vendorName, date, evalDate, flags, openItems,
+           conclusion, answerLabel }
+   ------------------------------------------------------------------------- */
+const REGISTER_COLUMNS = [
+  { label: "Tool",                     value: (c) => c.toolName },
+  { label: "Leverancier",              value: (c) => c.vendorName },
+  { label: "Eigenaar (rol)",           value: (c) => c.answers.v7 || "" },
+  { label: "Datum intake",             value: (c) => c.date },
+  { label: "Persoonsgegevens",         value: (c) => c.answerLabel("v1") },
+  { label: "Gezondheidsgegevens",      value: (c) => c.answerLabel("v2") },
+  { label: "Medisch doel",             value: (c) => c.answerLabel("v3") },
+  { label: "Zichtbaar voor patiënt",   value: (c) => c.answerLabel("v4") },
+  { label: "Verwerkingslocatie",       value: (c) => c.answerLabel("v5") },
+  { label: "Zelfbouw of aangepast",    value: (c) => c.answerLabel("v6") },
+  { label: "Rode vlaggen",             value: (c) => c.flags.map((f) => f.title).join(" | ") },
+  { label: "Te regelen acties",        value: (c) => c.openItems.map((o) => o.title).join(" | ") },
+  { label: "Conclusie",                value: (c) => c.conclusion },
+  { label: "Evaluatiedatum",           value: (c) => c.evalDate },
+];
+
+
+/* -------------------------------------------------------------------------
+   9. VASTE TEKSTEN
    ------------------------------------------------------------------------- */
 const DISCLAIMER =
   "Dit is een hulpmiddel om te bepalen wat er geregeld moet worden. Het is geen " +
@@ -514,12 +576,29 @@ function initStart() {
 
   el("start-form").addEventListener("submit", (e) => {
     e.preventDefault();
-    state.toolName = el("tool-name").value.trim();
-    state.vendorName = el("vendor-name").value.trim();
-    state.stepIndex = firstVisibleIndex(0, +1);
-    renderQuestion();
-    showScreen("question");
+    startWizard(null);
   });
+
+  // Voorbeeldprofielen als startpunt.
+  const chips = el("profile-chips");
+  PROFILES.forEach((p) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "chip";
+    btn.textContent = p.label;
+    btn.addEventListener("click", () => startWizard(p));
+    chips.appendChild(btn);
+  });
+}
+
+/* Start de vragenlijst, optioneel met een vooringevuld profiel. */
+function startWizard(profile) {
+  state.toolName = el("tool-name").value.trim();
+  state.vendorName = el("vendor-name").value.trim();
+  state.answers = profile ? { ...profile.answers } : {};
+  state.stepIndex = firstVisibleIndex(0, +1);
+  renderQuestion();
+  showScreen("question");
 }
 
 /* Zoek de eerstvolgende zichtbare vraag vanaf `from` in richting `dir`. */
@@ -715,15 +794,11 @@ function renderResult() {
 
   // Conclusie in één zin.
   const conclusionEl = el("result-conclusion");
-  if (flags.length > 0) {
-    conclusionEl.textContent =
-      "Nog niet klaar voor het register: zoek eerst de rode vlaggen uit voordat je deze tool in gebruik neemt.";
-    conclusionEl.className = "conclusion conclusion-warn";
-  } else {
-    conclusionEl.textContent =
-      "Geen rode vlaggen. Regel onderstaande punten, leg ze vast en neem de tool op in het AI-register.";
-    conclusionEl.className = "conclusion conclusion-ok";
-  }
+  conclusionEl.textContent = conclusionText(flags.length > 0);
+  conclusionEl.className = flags.length > 0 ? "conclusion conclusion-warn" : "conclusion conclusion-ok";
+
+  // Datum voor de printversie.
+  el("result-date").textContent = "Ingevuld op " + todayNl();
 
   // Rode vlaggen.
   const flagsCard = el("result-flags");
@@ -737,6 +812,9 @@ function renderResult() {
 
   // DPIA-aanzet aanbieden zodra een DPIA-toets aan de orde is.
   el("result-dpia").hidden = !dpiaIsRelevant();
+
+  // Opvraagbrief aanbieden zodra er iets bij de leverancier ligt.
+  el("result-letter").hidden = vendorItems().length === 0;
 
   // Reguliere artefacten, gegroepeerd per thema.
   const groupsWrap = el("result-groups");
@@ -782,6 +860,103 @@ function renderArtefact(it) {
     li.appendChild(ask);
   }
   return li;
+}
+
+/* ---- Gedeelde helpers voor uitvoer ---- */
+function conclusionText(hasFlags) {
+  return hasFlags
+    ? "Nog niet klaar voor het register: zoek eerst de rode vlaggen uit voordat je deze tool in gebruik neemt."
+    : "Geen rode vlaggen. Regel onderstaande punten, leg ze vast en neem de tool op in het AI-register.";
+}
+
+function todayNl() {
+  return new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function answerLabel(qid) {
+  const q = QUESTIONS.find((x) => x.id === qid);
+  if (!q || q.type !== "single") return "";
+  const opt = q.options.find((o) => o.value === state.answers[qid]);
+  return opt ? opt.label : "";
+}
+
+function grantedObligations() {
+  return collectObligationIds().map((id) => ({ id, ...OBLIGATIONS[id] }));
+}
+
+function vendorItems() {
+  return grantedObligations().filter((o) => o.askAt === "leverancier");
+}
+
+function downloadBlob(content, mime, filename) {
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+function fileSlug() {
+  return (state.toolName || "tool").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "tool";
+}
+
+/* ---- Opvraagbrief voor de leverancier ---- */
+function buildLetterText() {
+  const ctx = { toolName: state.toolName, vendorName: state.vendorName };
+  const lines = [];
+  lines.push(LETTER.aanhef);
+  lines.push("");
+  lines.push(LETTER.intro(ctx));
+  lines.push("");
+  vendorItems().forEach((it, i) => {
+    lines.push((i + 1) + ". " + it.title + ". " + it.note);
+  });
+  lines.push("");
+  lines.push(LETTER.outro);
+  lines.push("");
+  lines.push(LETTER.groet);
+  lines.push(state.answers.v7 ? "[Naam], " + state.answers.v7 : "[Naam en functie]");
+  return lines.join("\n");
+}
+
+function mailtoLetter() {
+  const subject = LETTER.subject({ toolName: state.toolName, vendorName: state.vendorName });
+  return "mailto:?subject=" + encodeURIComponent(subject) +
+         "&body=" + encodeURIComponent(buildLetterText());
+}
+
+/* ---- Registerregel als CSV ---- */
+function registerContext() {
+  const items = grantedObligations();
+  const flags = items.filter((it) => it.redFlag);
+  const evalDate = new Date();
+  evalDate.setFullYear(evalDate.getFullYear() + 1);
+  return {
+    answers: state.answers,
+    toolName: state.toolName,
+    vendorName: state.vendorName,
+    date: todayNl(),
+    evalDate: evalDate.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }),
+    flags,
+    openItems: items.filter((it) => !it.redFlag),
+    conclusion: conclusionText(flags.length > 0),
+    answerLabel,
+  };
+}
+
+function csvField(v) {
+  return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+}
+
+function buildRegisterCsv() {
+  const ctx = registerContext();
+  const header = REGISTER_COLUMNS.map((c) => csvField(c.label)).join(";");
+  const row = REGISTER_COLUMNS.map((c) => csvField(c.value(ctx))).join(";");
+  return "﻿" + header + "\r\n" + row + "\r\n";
 }
 
 /* ---- DPIA-aanzet als Word-document (volledig client-side) ---- */
@@ -842,17 +1017,7 @@ function buildDpiaHtml() {
 }
 
 function downloadDpia() {
-  const html = buildDpiaHtml();
-  const blob = new Blob(["﻿" + html], { type: "application/msword" });
-  const slug = (state.toolName || "tool").toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "tool";
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "DPIA-aanzet-" + slug + ".doc";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
+  downloadBlob("﻿" + buildDpiaHtml(), "application/msword", "DPIA-aanzet-" + fileSlug() + ".doc");
 }
 
 /* ---- Platte tekst voor klembord ---- */
@@ -920,6 +1085,30 @@ function initResultActions() {
 
   el("btn-dpia").addEventListener("click", downloadDpia);
 
+  el("btn-csv").addEventListener("click", () => {
+    downloadBlob(buildRegisterCsv(), "text/csv;charset=utf-8", "AI-register-" + fileSlug() + ".csv");
+  });
+
+  el("btn-letter-copy").addEventListener("click", async () => {
+    const text = buildLetterText();
+    const status = el("letter-status");
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        legacyCopy(text);
+      }
+    } catch (err) {
+      legacyCopy(text);
+    }
+    status.textContent = "Brieftekst gekopieerd naar het klembord.";
+    setTimeout(() => { status.textContent = ""; }, 4000);
+  });
+
+  el("btn-letter-mail").addEventListener("click", () => {
+    window.location.href = mailtoLetter();
+  });
+
   el("btn-restart").addEventListener("click", () => {
     // Wis alle state uit het geheugen.
     state.answers = {};
@@ -944,9 +1133,17 @@ function legacyCopy(text) {
   document.body.removeChild(ta);
 }
 
-/* ---- Opstarten ---- */
-document.addEventListener("DOMContentLoaded", () => {
+/* ---- Opstarten (idempotent: init mag maar één keer draaien) ---- */
+let appInitialized = false;
+function initApp() {
+  if (appInitialized) return;
+  appInitialized = true;
   initStart();
   initQuestionNav();
   initResultActions();
-});
+}
+if (document.readyState !== "loading") {
+  initApp();
+} else {
+  document.addEventListener("DOMContentLoaded", initApp);
+}

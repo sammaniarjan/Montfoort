@@ -25,6 +25,8 @@ geeft **geen** juridisch oordeel, hij vertaalt antwoorden naar acties.
 | `index.html`  | Semantische HTML: start-, vraag- en resultaatscherm.              |
 | `styles.css`  | Alle styling, mobile first, inclusief een schone printstylesheet. |
 | `app.js`      | Datablok (vragen + verplichtingen) **gescheiden** van de render.  |
+| `og.png`      | Voorvertoning voor gedeelde links (Open Graph, 1200 bij 630).     |
+| `CNAME`       | Custom domein voor GitHub Pages (`intake.manava.nl`).             |
 | `README.md`   | Dit bestand.                                                      |
 
 Geen buildstap, geen npm-afhankelijkheden, geen externe fonts of CDN's. Je kunt
@@ -135,6 +137,31 @@ Het document wordt volledig in de browser opgebouwd (als HTML in een
 `.doc`-bestand dat Word opent) en nergens heen gestuurd. Teksten wijzigen of
 onderdelen toevoegen doe je uitsluitend in `DPIA_TEMPLATE`; de generator
 (`buildDpiaHtml`) hoeft daarvoor niet aangepast te worden.
+
+### 6. `PROFILES`: voorbeeldprofielen op het startscherm
+
+Vooringevulde antwoordensets als startpunt (generieke categorieën, geen
+productnamen). Een profiel vult alleen de antwoorden vooraf in; de gebruiker
+loopt daarna alle vragen gewoon na. Een profiel toevoegen is één regel:
+
+```js
+{ label: "Naam van het profiel", answers: { v1: "ja", v2: "nee", ... } }
+```
+
+### 7. `LETTER`: opvraagbrief voor de leverancier
+
+Zodra minstens één actiepunt bij de leverancier ligt, biedt het
+resultaatscherm een opvraagbrief aan (kopiëren of openen in het
+e-mailprogramma). De punten in de brief volgen automatisch uit de intake:
+alle toegekende verplichtingen met `askAt: "leverancier"`. De vaste teksten
+(aanhef, intro, slot) staan in `LETTER`.
+
+### 8. `REGISTER_COLUMNS`: registerregel als CSV
+
+De knop "Registerregel (CSV)" downloadt één regel voor het AI-register
+(puntkomma-gescheiden, klaar voor Nederlandse Excel). De kolommen staan in
+`REGISTER_COLUMNS`; elke kolom heeft een `label` en een `value(ctx)`-functie.
+Kolommen toevoegen of hernoemen doe je alleen daar.
 
 ### Een vraag toevoegen: stappenplan
 

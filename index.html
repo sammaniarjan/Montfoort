@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Publieke intake-checklist voor AI- en softwaretools in de zorg. Bepaal wat je moet regelen voordat een tool in gebruik gaat en in het AI-register komt. Geen opslag, geen verzending.">
   <title>AI-intakechecklist voor de zorg</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='12'%20fill='%231c3b31'/%3E%3Ctext%20x='32'%20y='45'%20font-family='Georgia,serif'%20font-size='38'%20fill='%23fbfaf6'%20text-anchor='middle'%3Em%3C/text%3E%3C/svg%3E">
+  <meta property="og:title" content="AI-intakechecklist voor de zorg">
+  <meta property="og:description" content="Bepaal in zeven vragen wat je moet regelen voordat een AI- of softwaretool in gebruik gaat. Niets wordt opgeslagen of verzonden.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://intake.manava.nl/">
+  <meta property="og:image" content="https://intake.manava.nl/og.png">
+  <meta property="og:locale" content="nl_NL">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -56,6 +64,13 @@
         </div>
         <button type="submit" class="btn btn-primary">Start de checklist</button>
       </form>
+
+      <div class="profiles">
+        <p class="field-hint">Of begin met een voorbeeldprofiel. De antwoorden staan
+        dan alvast ingevuld als startpunt; je loopt alle vragen gewoon na en past
+        aan waar nodig.</p>
+        <div id="profile-chips" class="profile-chips"></div>
+      </div>
     </section>
 
     <!-- ============ VRAAGSCHERM ============ -->
@@ -90,6 +105,7 @@
       <div class="card result-head">
         <h2 id="result-title">Jouw checklist</h2>
         <p id="result-subject" class="result-subject"></p>
+        <p id="result-date" class="result-date"></p>
         <p id="result-conclusion" class="conclusion"></p>
       </div>
 
@@ -114,16 +130,35 @@
         <button type="button" id="btn-dpia" class="btn btn-ghost">Download DPIA-aanzet (Word)</button>
       </div>
 
+      <div id="result-letter" class="card dpia no-print" hidden>
+        <h3>Opvraagbrief voor de leverancier</h3>
+        <p class="dpia-text">
+          Een deel van de punten moet je opvragen bij de leverancier. Deze brief
+          zet precies de punten uit jouw intake op een rij, klaar om te versturen.
+        </p>
+        <div class="letter-buttons">
+          <button type="button" id="btn-letter-copy" class="btn btn-ghost">Kopieer brieftekst</button>
+          <button type="button" id="btn-letter-mail" class="btn btn-ghost">Open in e-mailprogramma</button>
+        </div>
+        <span id="letter-status" class="copy-status" role="status" aria-live="polite"></span>
+      </div>
+
       <div class="card actions no-print">
         <div class="actions-buttons">
           <button type="button" id="btn-copy" class="btn btn-primary">Kopieer naar klembord</button>
           <button type="button" id="btn-print" class="btn btn-ghost">Print of sla op als PDF</button>
+          <button type="button" id="btn-csv" class="btn btn-ghost">Registerregel (CSV)</button>
         </div>
         <span id="copy-status" class="copy-status" role="status" aria-live="polite"></span>
         <div class="actions-reset">
           <button type="button" id="btn-restart" class="btn-link">Nieuwe tool beoordelen</button>
         </div>
       </div>
+
+      <p class="advice-cta no-print">
+        Hulp nodig bij de DPIA, de opvolging of het inrichten van het AI-register?
+        Kijk op <a href="https://www.manava.nl" rel="noopener">manava.nl</a>.
+      </p>
     </section>
 
   </main>
