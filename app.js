@@ -33,8 +33,10 @@ const THEME_ORDER = ["privacy", "medisch", "aiact", "beheer"];
 
      theme   : sleutel uit THEMES
      title   : de regel die op de lijst komt
-     note    : één regel toelichting in gewone taal
+     note    : één regel toelichting in gewone taal (gericht aan de gebruiker)
      askAt   : bij wie je het opvraagt/regelt (optioneel)
+     letter  : formulering voor in de opvraagbrief, gericht aan de leverancier
+               (alleen bij askAt "leverancier")
      redFlag : true = wordt apart en bovenaan getoond
    ------------------------------------------------------------------------- */
 const OBLIGATIONS = {
@@ -44,6 +46,7 @@ const OBLIGATIONS = {
     title: "Verwerkersovereenkomst sluiten met de leverancier",
     note: "Leg schriftelijk vast welke gegevens de leverancier voor je verwerkt en onder welke voorwaarden.",
     askAt: "leverancier",
+    letter: "Een verwerkersovereenkomst, met daarin welke gegevens u voor ons verwerkt en onder welke voorwaarden.",
   },
   verwerkingsregister: {
     theme: "privacy",
@@ -92,12 +95,14 @@ const OBLIGATIONS = {
     title: "Hostinglocatie schriftelijk laten bevestigen",
     note: "Vraag de leverancier schriftelijk waar de gegevens fysiek worden opgeslagen en verwerkt.",
     askAt: "leverancier",
+    letter: "Een schriftelijke bevestiging van de locatie waar de gegevens worden opgeslagen en verwerkt.",
   },
   subverwerkers: {
     theme: "privacy",
     title: "Actuele subverwerkerslijst opvragen",
     note: "Vraag welke andere partijen de leverancier inschakelt om jouw gegevens te verwerken.",
     askAt: "leverancier",
+    letter: "Een actuele lijst van de subverwerkers die u inschakelt bij de verwerking van onze gegevens.",
   },
 
   // --- Medisch hulpmiddel en CE ---
@@ -106,6 +111,7 @@ const OBLIGATIONS = {
     title: "CE-verklaring en risicoklasse opvragen",
     note: "Zonder CE-markering voor een medisch doel: niet in gebruik nemen. Vraag de verklaring en de risicoklasse op.",
     askAt: "leverancier",
+    letter: "De CE-verklaring van de tool en de bijbehorende risicoklasse.",
     redFlag: true,
   },
   validatie: {
@@ -113,6 +119,7 @@ const OBLIGATIONS = {
     title: "Validatiegegevens in een Nederlandse eerstelijnspopulatie opvragen",
     note: "Vraag of de tool is gevalideerd in een populatie die op jouw patiënten lijkt, niet alleen in het buitenland.",
     askAt: "leverancier",
+    letter: "Validatiegegevens van de tool in een Nederlandse eerstelijnspopulatie, of een toelichting als die er niet zijn.",
   },
   eindverantwoordelijk: {
     theme: "medisch",
@@ -566,8 +573,20 @@ function showScreen(name) {
   ["start", "question", "result"].forEach((s) => {
     el("screen-" + s).hidden = (s !== name);
   });
+  // Linksboven een weg terug, behalve op het startscherm zelf.
+  el("btn-restart-top").hidden = (name === "start");
   el("main").focus();
   window.scrollTo(0, 0);
+}
+
+/* Wis alle state uit het geheugen en keer terug naar het startscherm. */
+function restartTool() {
+  state.answers = {};
+  state.toolName = "";
+  state.vendorName = "";
+  state.stepIndex = 0;
+  el("start-form").reset();
+  showScreen("start");
 }
 
 /* ---- Startscherm ---- */
@@ -913,7 +932,7 @@ function buildLetterText() {
   lines.push(LETTER.intro(ctx));
   lines.push("");
   vendorItems().forEach((it, i) => {
-    lines.push((i + 1) + ". " + it.title + ". " + it.note);
+    lines.push((i + 1) + ". " + (it.letter || it.title));
   });
   lines.push("");
   lines.push(LETTER.outro);
@@ -1109,15 +1128,8 @@ function initResultActions() {
     window.location.href = mailtoLetter();
   });
 
-  el("btn-restart").addEventListener("click", () => {
-    // Wis alle state uit het geheugen.
-    state.answers = {};
-    state.toolName = "";
-    state.vendorName = "";
-    state.stepIndex = 0;
-    el("start-form").reset();
-    showScreen("start");
-  });
+  el("btn-restart").addEventListener("click", restartTool);
+  el("btn-restart-top").addEventListener("click", restartTool);
 }
 
 /* Terugval voor browsers zonder clipboard-API. */

@@ -153,8 +153,11 @@ loopt daarna alle vragen gewoon na. Een profiel toevoegen is één regel:
 Zodra minstens één actiepunt bij de leverancier ligt, biedt het
 resultaatscherm een opvraagbrief aan (kopiëren of openen in het
 e-mailprogramma). De punten in de brief volgen automatisch uit de intake:
-alle toegekende verplichtingen met `askAt: "leverancier"`. De vaste teksten
-(aanhef, intro, slot) staan in `LETTER`.
+alle toegekende verplichtingen met `askAt: "leverancier"`. In de brief wordt
+per verplichting het `letter`-veld gebruikt: een formulering gericht aan de
+leverancier ("Een verwerkersovereenkomst, met daarin ..."), niet de
+gebruikersinstructie uit `note`. De vaste teksten (aanhef, intro, slot)
+staan in `LETTER`.
 
 ### 8. `REGISTER_COLUMNS`: registerregel als CSV
 

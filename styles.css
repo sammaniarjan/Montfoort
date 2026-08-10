@@ -131,6 +131,22 @@ a.wordmark:focus-visible { outline: 3px solid var(--green-dark); outline-offset:
 main { padding: 0.5rem 0 3rem; outline: none; }
 main.wrap { padding-left: 1.25rem; padding-right: 1.25rem; }
 
+/* ---- Terugweg linksboven ---- */
+.topnav { min-height: 0; }
+.btn-back-link {
+  background: none;
+  border: 0;
+  padding: 0.25rem 0;
+  margin: 0 0 0.9rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+.btn-back-link:hover { color: var(--green-dark); text-decoration: underline; text-underline-offset: 3px; }
+.btn-back-link:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 2px; }
+
 /* ---- Kaarten ---- */
 .card {
   background: var(--card);
