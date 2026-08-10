@@ -13,7 +13,7 @@
 
 
 /* -------------------------------------------------------------------------
-   1. THEMA'S — waaronder de artefacten op de eindlijst worden gegroepeerd
+   1. THEMA'S: waaronder de artefacten op de eindlijst worden gegroepeerd
    ------------------------------------------------------------------------- */
 const THEMES = {
   privacy: "Privacy en AVG",
@@ -72,7 +72,7 @@ const OBLIGATIONS = {
   beveiligingToegang: {
     theme: "privacy",
     title: "Beveiligingsmaatregelen en toegangsrechten vastleggen",
-    note: "Leg vast hoe de gegevens beveiligd zijn en wie er bij mag — passend bij gezondheidsgegevens.",
+    note: "Leg vast hoe de gegevens beveiligd zijn en wie er bij mag, passend bij gezondheidsgegevens.",
     askAt: "eigen organisatie",
   },
   doorgiftetoets: {
@@ -143,7 +143,7 @@ const OBLIGATIONS = {
   },
   aanbiedersrol: {
     theme: "aiact",
-    title: "Mogelijke aanbiedersrol onder de AI Act — geen gebruiksverantwoordelijke",
+    title: "Mogelijke aanbiedersrol onder de AI Act, geen gebruiksverantwoordelijke",
     note: "Door zelf bouwen of wezenlijk aanpassen kun je 'aanbieder' worden, met zwaardere plichten. Win eerst juridisch advies in.",
     askAt: "juridisch advies",
     redFlag: true,
@@ -209,7 +209,7 @@ const QUESTIONS = [
   },
   {
     id: "v3",
-    text: "Heeft de tool een medisch doel — triage, diagnostiek, risicoscore of behandeladvies?",
+    text: "Heeft de tool een medisch doel, zoals triage, diagnostiek, risicoscore of behandeladvies?",
     type: "single",
     options: [
       { value: "ja", label: "Ja",
@@ -267,7 +267,7 @@ const QUESTIONS = [
 
 
 /* -------------------------------------------------------------------------
-   4. ALTIJD — verplichtingen die gelden ongeacht de antwoorden
+   4. ALTIJD: verplichtingen die gelden ongeacht de antwoorden
    ------------------------------------------------------------------------- */
 const ALWAYS = ["aiRegister", "aiGeletterdheid", "eigenaarEvaluatie"];
 
@@ -289,7 +289,7 @@ const ASK_AT_LABEL = {
 
 
 /* =========================================================================
-   ================  RENDERLOGICA — hieronder niet nodig aan te passen  =====
+   ================  RENDERLOGICA: hieronder niet nodig aan te passen  =====
    ========================================================================= */
 
 const state = {
@@ -610,7 +610,7 @@ function buildPlainText() {
   lines.push("");
 
   if (flags.length > 0) {
-    lines.push("RODE VLAGGEN — EERST UITZOEKEN");
+    lines.push("RODE VLAGGEN: EERST UITZOEKEN");
     flags.forEach((it) => pushArtefactLines(lines, it));
     lines.push("");
   }

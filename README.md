@@ -6,12 +6,12 @@ gebruik wordt genomen en in het AI-register wordt opgenomen.
 
 De gebruiker beantwoordt zeven korte vragen over één tool en krijgt een
 concrete lijst met te regelen artefacten terug, gegroepeerd per thema. De tool
-geeft **geen** juridisch oordeel — hij vertaalt antwoorden naar acties.
+geeft **geen** juridisch oordeel, hij vertaalt antwoorden naar acties.
 
 ## Belangrijkste eigenschap: privacy
 
 - Geen backend, geen database, geen accounts, geen cookies, geen analytics.
-- Er worden **geen** antwoorden opgeslagen of verzonden — niet naar een server,
+- Er worden **geen** antwoorden opgeslagen of verzonden: niet naar een server,
   niet naar `localStorage` of `sessionStorage`. De state leeft uitsluitend in
   het geheugen van de pagina en is weg zodra je ververst.
 - Er wordt nergens om persoons- of patiëntgegevens gevraagd. Alleen de naam van
@@ -52,7 +52,7 @@ toe te voegen of teksten te veranderen.
 De thema's waaronder artefacten op de eindlijst worden gegroepeerd, plus
 `THEME_ORDER` voor de volgorde.
 
-### 2. `OBLIGATIONS` — de catalogus van te regelen artefacten
+### 2. `OBLIGATIONS`: de catalogus van te regelen artefacten
 
 Elke verplichting heeft een unieke sleutel (`id`) en deze velden:
 
@@ -69,7 +69,7 @@ ceVerklaring: {
 De labels achter `askAt` staan in `ASK_AT_LABEL`. Voeg daar een sleutel toe als
 je een nieuwe partij wilt gebruiken.
 
-### 3. `QUESTIONS` — de zeven (of meer) vragen
+### 3. `QUESTIONS`: de zeven (of meer) vragen
 
 ```js
 {
@@ -90,28 +90,28 @@ je een nieuwe partij wilt gebruiken.
 
 Betekenis van de velden per optie:
 
-- **`grants`** — id's uit `OBLIGATIONS` die dit antwoord activeert.
-- **`note`** — toelichting die verschijnt zodra dit antwoord wordt gekozen
+- **`grants`**: id's uit `OBLIGATIONS` die dit antwoord activeert.
+- **`note`**: toelichting die verschijnt zodra dit antwoord wordt gekozen
   (bijvoorbeeld: “weet ik niet” telt als ja).
-- **`reask` + `explanation`** — bij twijfel: toon uitleg en stel de vraag
+- **`reask` + `explanation`**: bij twijfel: toon uitleg en stel de vraag
   opnieuw; de gebruiker moet alsnog een definitief antwoord kiezen.
 
 Op vraagniveau:
 
-- **`showIf(answers)`** — voorwaardelijke vraag (bijvoorbeeld V2 alleen als er
+- **`showIf(answers)`**: voorwaardelijke vraag (bijvoorbeeld V2 alleen als er
   persoonsgegevens zijn). `answers` is een object met alle gegeven antwoorden,
   gesleuteld op vraag-`id`.
-- **`dynamicGrants(answers)`** — extra verplichtingen op basis van álle
+- **`dynamicGrants(answers)`**: extra verplichtingen op basis van álle
   antwoorden samen (bijvoorbeeld de MDR-toets alleen bij zelfbouw én een
   medisch doel).
-- **`type: "text"`** — vrij tekstveld; het antwoord wordt als string bewaard en
+- **`type: "text"`**: vrij tekstveld; het antwoord wordt als string bewaard en
   op het resultaat getoond. Gebruik `placeholder` voor een hint.
 
 ### 4. `ALWAYS`
 
 Id's van verplichtingen die altijd gelden, ongeacht de antwoorden.
 
-### Een vraag toevoegen — stappenplan
+### Een vraag toevoegen: stappenplan
 
 1. Voeg eventueel nieuwe verplichtingen toe aan `OBLIGATIONS`.
 2. Voeg een object toe aan `QUESTIONS` met een uniek `id` en de gewenste
@@ -130,20 +130,27 @@ Het is een set statische bestanden; elke statische host werkt.
   bijvoorbeeld Netlify, Cloudflare Pages, GitHub Pages of een eigen webserver)
   en wijs het subdomein daarheen. Er is geen buildstap.
 
-### Huisstijlkleur wijzigen
+### Huisstijlkleuren wijzigen
 
-De accentkleur staat als CSS-variabele bovenaan `styles.css`:
+De kleuren staan als CSS-variabelen bovenaan `styles.css`. Groen is de rustige
+merkkleur (koppen en structuur), steenrood is de actiekleur (knoppen, accenten,
+rode vlaggen):
 
 ```css
 :root {
-  --accent:      #0f6b62;   /* hoofd-accentkleur */
-  --accent-dark: #0a4f48;   /* donkerder, voor hover en focus */
-  --accent-soft: #e6f1ef;   /* lichte tint voor achtergronden */
+  --green:      #1c3b31;   /* diep bosgroen: koppen, structuur */
+  --green-dark: #12281f;   /* donkerder: hover, focus */
+  --green-soft: #eef2ee;   /* lichte tint: geselecteerde staat, ok-vlak */
+
+  --rust:       #9a3416;   /* steenrood: knoppen, accenten, aandacht */
+  --rust-dark:  #7c2911;   /* donkerder: hover */
+  --rust-soft:  #f6ebe5;   /* lichte tint: rode vlaggen, waarschuwing */
 }
 ```
 
-Pas deze drie waarden aan naar de Manava-huisstijl; de rest van de interface
-volgt automatisch.
+Pas deze waarden aan naar de exacte Manava-huisstijl; de rest van de interface
+volgt automatisch. Koppen gebruiken een systeem-serif (`--serif`); ook die stel
+je bovenaan `styles.css` in.
 
 ## Controleren (definition of done)
 
@@ -152,7 +159,7 @@ volgt automatisch.
 - Leesbaar en bedienbaar op 375px breed.
 - Printversie (Print of “opslaan als PDF”) past op maximaal twee A4'tjes en
   bevat de disclaimer.
-- Geen netwerkverzoek na het laden — controleer dit in het netwerktabblad van
+- Geen netwerkverzoek na het laden: controleer dit in het netwerktabblad van
   de browser.
 - Geen `localStorage`, geen `sessionStorage`, geen cookies.
 
@@ -164,4 +171,4 @@ oordeel over risico's en maatregelen en vraagt om een inhoudelijke beoordeling.
 
 ---
 
-Een hulpmiddel van **Manava** — advies over AI en compliance in de zorg.
+Een hulpmiddel van **Manava**, advies over AI en compliance in de zorg.
