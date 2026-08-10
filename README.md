@@ -4,7 +4,7 @@ Een publiek toegankelijke, statische webtool waarmee een zorgorganisatie per
 AI- of softwaretool bepaalt wat er geregeld moet zijn vóórdat die tool in
 gebruik wordt genomen en in het AI-register wordt opgenomen.
 
-De gebruiker beantwoordt zeven korte vragen over één tool en krijgt een
+De gebruiker beantwoordt een korte reeks vragen over één tool en krijgt een
 concrete lijst met te regelen artefacten terug, gegroepeerd per thema. De tool
 geeft **geen** juridisch oordeel, hij vertaalt antwoorden naar acties.
 
@@ -71,7 +71,7 @@ ceVerklaring: {
 De labels achter `askAt` staan in `ASK_AT_LABEL`. Voeg daar een sleutel toe als
 je een nieuwe partij wilt gebruiken.
 
-### 3. `QUESTIONS`: de zeven (of meer) vragen
+### 3. `QUESTIONS`: de vragen
 
 ```js
 {
