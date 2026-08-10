@@ -295,7 +295,8 @@ const DPIA_TEMPLATE = {
     "Deze aanzet volgt de indeling van het Model DPIA Rijksdienst. Het is een " +
     "voorzet op basis van de intake-checklist, geen ingevulde DPIA. De " +
     "beoordeling van risico's en maatregelen vraagt om een inhoudelijk oordeel " +
-    "van de praktijk, samen met de functionaris gegevensbescherming (FG).",
+    "van de praktijk, samen met de functionaris gegevensbescherming (FG). " +
+    "Heeft de organisatie geen FG, betrek dan een externe privacyadviseur.",
   sections: [
     {
       nr: 1, title: "Voorstel",
@@ -461,7 +462,7 @@ const DISCLAIMER =
 
 const ASK_AT_LABEL = {
   "leverancier": "Opvragen bij de leverancier",
-  "FG": "Regelen met de FG (functionaris gegevensbescherming)",
+  "FG": "Regelen met de FG, of zonder FG met een privacyadviseur",
   "eigen organisatie": "Regelen binnen de eigen organisatie",
   "juridisch advies": "Eerst juridisch advies inwinnen",
 };

@@ -12,7 +12,7 @@
 
   <header class="masthead">
     <div class="wrap masthead-inner">
-      <span class="wordmark">manava</span>
+      <a class="wordmark" href="https://www.manava.nl" rel="noopener">manava</a>
       <span class="masthead-tag">intakechecklist</span>
     </div>
   </header>
@@ -107,17 +107,22 @@
           Uit je antwoorden volgt een DPIA-toets. Download hier een voorzet die de
           indeling van het Model DPIA Rijksdienst volgt, met je antwoorden alvast
           ingevuld waar dat kan. De beoordeling van risico's en maatregelen blijft
-          werk voor de praktijk en de FG; die onderdelen staan bewust open.
+          werk voor de praktijk en de FG, of een privacyadviseur als je organisatie
+          geen FG heeft; die onderdelen staan bewust open.
           Ook dit document wordt in je eigen browser gemaakt en nergens heen gestuurd.
         </p>
         <button type="button" id="btn-dpia" class="btn btn-ghost">Download DPIA-aanzet (Word)</button>
       </div>
 
       <div class="card actions no-print">
-        <button type="button" id="btn-copy" class="btn btn-primary">Kopieer naar klembord</button>
-        <button type="button" id="btn-print" class="btn btn-ghost">Print of sla op als PDF</button>
-        <button type="button" id="btn-restart" class="btn btn-ghost">Nieuwe tool beoordelen</button>
+        <div class="actions-buttons">
+          <button type="button" id="btn-copy" class="btn btn-primary">Kopieer naar klembord</button>
+          <button type="button" id="btn-print" class="btn btn-ghost">Print of sla op als PDF</button>
+        </div>
         <span id="copy-status" class="copy-status" role="status" aria-live="polite"></span>
+        <div class="actions-reset">
+          <button type="button" id="btn-restart" class="btn-link">Nieuwe tool beoordelen</button>
+        </div>
       </div>
     </section>
 
@@ -126,7 +131,7 @@
   <footer class="site-footer">
     <div class="wrap">
       <p class="disclaimer" id="disclaimer-footer"></p>
-      <p class="attribution">Een hulpmiddel van <span class="wordmark wordmark-sm">manava</span></p>
+      <p class="attribution">Een hulpmiddel van <a class="wordmark wordmark-sm" href="https://www.manava.nl" rel="noopener">manava</a>, advies over AI en compliance in de zorg</p>
     </div>
   </footer>
 
