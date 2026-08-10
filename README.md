@@ -111,6 +111,31 @@ Op vraagniveau:
 
 Id's van verplichtingen die altijd gelden, ongeacht de antwoorden.
 
+### 5. `DPIA_TEMPLATE`: de downloadbare DPIA-aanzet
+
+Zodra de antwoorden een DPIA-toets opleveren (vraag 2 = ja), biedt het
+resultaatscherm een download aan: een Word-document dat de indeling van het
+Model DPIA Rijksdienst volgt (17 onderdelen), met de antwoorden uit de intake
+alvast ingevuld waar dat kan. Open onderdelen zijn gemarkeerd met
+`OPEN_MARKER` ("[Nog invullen door de praktijk]").
+
+Elk onderdeel in `DPIA_TEMPLATE.sections`:
+
+```js
+{
+  nr: 7,                          // nummer in het model
+  title: "Verwerkingslocaties",   // titel van het onderdeel
+  hint: "Waar worden de gegevens opgeslagen en verwerkt ...",  // invulinstructie
+  prefill: (ctx) => [...],        // regels die we al kunnen invullen;
+                                  // ctx = { answers, toolName, vendorName }
+}
+```
+
+Het document wordt volledig in de browser opgebouwd (als HTML in een
+`.doc`-bestand dat Word opent) en nergens heen gestuurd. Teksten wijzigen of
+onderdelen toevoegen doe je uitsluitend in `DPIA_TEMPLATE`; de generator
+(`buildDpiaHtml`) hoeft daarvoor niet aangepast te worden.
+
 ### Een vraag toevoegen: stappenplan
 
 1. Voeg eventueel nieuwe verplichtingen toe aan `OBLIGATIONS`.

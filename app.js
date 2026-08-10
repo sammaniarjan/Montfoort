@@ -273,7 +273,186 @@ const ALWAYS = ["aiRegister", "aiGeletterdheid", "eigenaarEvaluatie"];
 
 
 /* -------------------------------------------------------------------------
-   5. VASTE TEKSTEN
+   5. DPIA-AANZET
+   Wordt aangeboden als download zodra de antwoorden een DPIA-toets opleveren
+   (vraag 2 = ja). De indeling volgt het Model DPIA Rijksdienst. Per onderdeel:
+
+     nr      : nummer in het model
+     title   : titel van het onderdeel
+     hint    : wat hier ingevuld moet worden, in gewone taal
+     prefill : functie (ctx) => regels die we al kunnen invullen op basis van
+               de antwoorden; ctx = { answers, toolName, vendorName }
+
+   Regels die de praktijk zelf moet invullen markeren we met OPEN_MARKER.
+   Het document wordt volledig in de browser opgebouwd; er wordt niets
+   opgehaald of verzonden.
+   ------------------------------------------------------------------------- */
+const OPEN_MARKER = "[Nog invullen door de praktijk]";
+
+const DPIA_TEMPLATE = {
+  docTitle: "Aanzet voor een DPIA",
+  modelRef:
+    "Deze aanzet volgt de indeling van het Model DPIA Rijksdienst. Het is een " +
+    "voorzet op basis van de intake-checklist, geen ingevulde DPIA. De " +
+    "beoordeling van risico's en maatregelen vraagt om een inhoudelijk oordeel " +
+    "van de praktijk, samen met de functionaris gegevensbescherming (FG).",
+  sections: [
+    {
+      nr: 1, title: "Voorstel",
+      hint: "Beschrijf de tool, wat hij doet en waarom de organisatie hem wil gebruiken.",
+      prefill: (ctx) => {
+        const r = [];
+        if (ctx.toolName) r.push("Naam van de tool: " + ctx.toolName);
+        if (ctx.vendorName) r.push("Leverancier: " + ctx.vendorName);
+        r.push(ctx.answers.v3 === "ja"
+          ? "De tool heeft volgens de intake een medisch doel (triage, diagnostiek, risicoscore of behandeladvies)."
+          : "De tool heeft volgens de intake geen medisch doel; de zorgverlener controleert de output en blijft eindverantwoordelijk.");
+        r.push("Doel en gewenste werking: " + OPEN_MARKER);
+        return r;
+      },
+    },
+    {
+      nr: 2, title: "Persoonsgegevens",
+      hint: "Welke categorieën persoonsgegevens gaan er in de tool, van wie, en hoe gevoelig zijn ze?",
+      prefill: (ctx) => {
+        const r = [];
+        if (ctx.answers.v1 === "weet-niet") {
+          r.push("Bij de intake was onduidelijk of er persoonsgegevens worden verwerkt. Uitgangspunt is dat dit wel zo is zodra er tekst uit de praktijk in de tool gaat. Stel dit eerst definitief vast.");
+        }
+        if (ctx.answers.v2 === "ja") {
+          r.push("Er worden patiënt- of gezondheidsgegevens verwerkt. Dit zijn bijzondere persoonsgegevens (artikel 9 AVG).");
+        }
+        r.push("Precieze categorieën gegevens en betrokkenen: " + OPEN_MARKER);
+        return r;
+      },
+    },
+    {
+      nr: 3, title: "Gegevensverwerkingen",
+      hint: "Welke verwerkingen vinden plaats: invoer, analyse, opslag, teruglevering, hergebruik voor training?",
+      prefill: () => ["Vraag de leverancier expliciet of invoer wordt bewaard of gebruikt om modellen te trainen. " + OPEN_MARKER],
+    },
+    {
+      nr: 4, title: "Verwerkingsdoeleinden",
+      hint: "Waarvoor worden de gegevens precies verwerkt? Wees concreet per verwerking.",
+      prefill: () => [OPEN_MARKER],
+    },
+    {
+      nr: 5, title: "Betrokken partijen",
+      hint: "Wie zijn verwerkingsverantwoordelijke, verwerker en subverwerkers, en wat is hun rol?",
+      prefill: (ctx) => {
+        const r = ["Verwerkingsverantwoordelijke: de eigen organisatie."];
+        if (ctx.vendorName) r.push("Beoogd verwerker: " + ctx.vendorName + ".");
+        r.push("Vraag de actuele subverwerkerslijst op bij de leverancier en neem die hier op. " + OPEN_MARKER);
+        return r;
+      },
+    },
+    {
+      nr: 6, title: "Belangen bij de gegevensverwerking",
+      hint: "Welke belangen hebben de organisatie, de patiënt en de leverancier bij deze verwerking?",
+      prefill: () => [OPEN_MARKER],
+    },
+    {
+      nr: 7, title: "Verwerkingslocaties",
+      hint: "Waar worden de gegevens opgeslagen en verwerkt, en vindt er doorgifte buiten de EU plaats?",
+      prefill: (ctx) => {
+        const v5 = ctx.answers.v5;
+        if (v5 === "binnen-eu") return ["Volgens de intake draaien de gegevens binnen de EU. Laat de hostinglocatie schriftelijk bevestigen door de leverancier."];
+        return [
+          v5 === "buiten-eu"
+            ? "Volgens de intake draaien de gegevens buiten de EU."
+            : "Bij de intake was de verwerkingslocatie onbekend. Uitgangspunt tot bevestiging: buiten de EU.",
+          "Voer een doorgiftetoets uit en laat de hostinglocatie schriftelijk bevestigen. " + OPEN_MARKER,
+        ];
+      },
+    },
+    {
+      nr: 8, title: "Technieken en methoden",
+      hint: "Welke techniek gebruikt de tool (AI-model, beslisregels) en hoe komt de output tot stand?",
+      prefill: (ctx) => {
+        const r = ["Het gaat om een AI-toepassing. Beschrijf het type model en hoe de output tot stand komt. " + OPEN_MARKER];
+        if (ctx.answers.v6 === "ja") {
+          r.push("Let op: de tool is zelf gebouwd of wezenlijk aangepast. Mogelijk geldt een aanbiedersrol onder de AI Act. Win eerst juridisch advies in.");
+        }
+        return r;
+      },
+    },
+    {
+      nr: 9, title: "Juridisch en beleidsmatig kader",
+      hint: "Welke wet- en regelgeving is van toepassing op deze verwerking?",
+      prefill: (ctx) => {
+        const kaders = ["AVG", "WGBO"];
+        kaders.push("AI-verordening (AI Act), waaronder artikel 4 (AI-geletterdheid)");
+        if (ctx.answers.v4 === "ja") kaders[kaders.length - 1] += " en artikel 50 (transparantie)";
+        if (ctx.answers.v3 === "ja") kaders.push("MDR (medische hulpmiddelen), inclusief CE-markering");
+        return ["Van toepassing zijn in elk geval: " + kaders.join(", ") + ".", "Aanvullen met interne kaders en beroepsnormen: " + OPEN_MARKER];
+      },
+    },
+    {
+      nr: 10, title: "Bewaartermijnen",
+      hint: "Hoe lang worden de gegevens bewaard en waarom die termijn?",
+      prefill: () => [OPEN_MARKER],
+    },
+    {
+      nr: 11, title: "Rechtsgrond",
+      hint: "Op welke grondslag uit artikel 6 AVG is de verwerking gebaseerd?",
+      prefill: () => [OPEN_MARKER],
+    },
+    {
+      nr: 12, title: "Bijzondere persoonsgegevens",
+      hint: "Als er bijzondere persoonsgegevens worden verwerkt: welke uitzondering uit artikel 9 AVG geldt?",
+      prefill: (ctx) => ctx.answers.v2 === "ja"
+        ? ["Er worden gezondheidsgegevens verwerkt. Onderbouw de uitzondering, doorgaans artikel 9 lid 2 onder h AVG (verlening van gezondheidszorg). " + OPEN_MARKER]
+        : ["Volgens de intake geen bijzondere persoonsgegevens. Bevestig dit hier. " + OPEN_MARKER],
+    },
+    {
+      nr: 13, title: "Doelbinding",
+      hint: "Blijft de verwerking binnen het doel waarvoor de gegevens oorspronkelijk zijn verzameld?",
+      prefill: () => [OPEN_MARKER],
+    },
+    {
+      nr: 14, title: "Noodzaak en evenredigheid",
+      hint: "Is de verwerking noodzakelijk voor het doel, en is er geen minder ingrijpend alternatief?",
+      prefill: () => [OPEN_MARKER],
+    },
+    {
+      nr: 15, title: "Rechten van de betrokkene",
+      hint: "Hoe worden patiënten geïnformeerd en hoe kunnen zij hun rechten uitoefenen?",
+      prefill: (ctx) => {
+        const r = [];
+        if (ctx.answers.v4 === "ja") {
+          r.push("De patiënt ziet de tool of door de tool gegenereerde tekst. Regel hoe kenbaar wordt gemaakt dat het om AI gaat en hoe AI-gebruik in het dossier wordt vermeld.");
+        }
+        r.push("Informatievoorziening en uitoefening van rechten: " + OPEN_MARKER);
+        return r;
+      },
+    },
+    {
+      nr: 16, title: "Risico's voor de betrokkenen",
+      hint: "Beschrijf de risico's voor patiënten: kans, impact en oorzaak. Dit is de kern van de DPIA en vraagt een eigen inhoudelijke beoordeling.",
+      prefill: (ctx) => {
+        const r = ["Aandachtspunten uit de intake om in de risicoanalyse te betrekken:"];
+        if (ctx.answers.v2 === "ja") r.push("- Gevoeligheid: het gaat om gezondheidsgegevens.");
+        if (ctx.answers.v3 === "ja") r.push("- Medisch doel: risico op onjuiste of niet-gevalideerde output met gevolgen voor de zorg.");
+        if (ctx.answers.v5 !== "binnen-eu") r.push("- Verwerkingslocatie buiten de EU of onbekend.");
+        if (ctx.answers.v6 === "ja") r.push("- Zelfbouw of wezenlijke aanpassing van de tool.");
+        r.push("Volledige risicobeoordeling (kans en impact per risico): " + OPEN_MARKER);
+        return r;
+      },
+    },
+    {
+      nr: 17, title: "Maatregelen",
+      hint: "Welke maatregelen beperken de risico's, wie voert ze uit en wanneer?",
+      prefill: () => [
+        "Neem de actielijst uit de intake-checklist als startpunt en vul aan per risico uit onderdeel 16.",
+        "Maatregelen, eigenaar en planning: " + OPEN_MARKER,
+      ],
+    },
+  ],
+};
+
+
+/* -------------------------------------------------------------------------
+   6. VASTE TEKSTEN
    ------------------------------------------------------------------------- */
 const DISCLAIMER =
   "Dit is een hulpmiddel om te bepalen wat er geregeld moet worden. Het is geen " +
@@ -546,6 +725,9 @@ function renderResult() {
     flagsCard.hidden = true;
   }
 
+  // DPIA-aanzet aanbieden zodra een DPIA-toets aan de orde is.
+  el("result-dpia").hidden = !dpiaIsRelevant();
+
   // Reguliere artefacten, gegroepeerd per thema.
   const groupsWrap = el("result-groups");
   groupsWrap.innerHTML = "";
@@ -590,6 +772,77 @@ function renderArtefact(it) {
     li.appendChild(ask);
   }
   return li;
+}
+
+/* ---- DPIA-aanzet als Word-document (volledig client-side) ---- */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+function dpiaContext() {
+  return { answers: state.answers, toolName: state.toolName, vendorName: state.vendorName };
+}
+
+function dpiaIsRelevant() {
+  const ids = collectObligationIds();
+  return ids.includes("dpiaToets") || ids.includes("dpiaVolledig");
+}
+
+function buildDpiaHtml() {
+  const ctx = dpiaContext();
+  const datum = new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+
+  const head =
+    "<h1>" + escapeHtml(DPIA_TEMPLATE.docTitle) + "</h1>" +
+    "<p class='meta'>" +
+    (ctx.toolName ? "Tool: " + escapeHtml(ctx.toolName) + "<br>" : "") +
+    (ctx.vendorName ? "Leverancier: " + escapeHtml(ctx.vendorName) + "<br>" : "") +
+    (ctx.answers.v7 ? "Eigenaar: " + escapeHtml(ctx.answers.v7) + "<br>" : "") +
+    "Datum aanzet: " + escapeHtml(datum) +
+    "</p>" +
+    "<p class='intro'>" + escapeHtml(DPIA_TEMPLATE.modelRef) + "</p>";
+
+  const body = DPIA_TEMPLATE.sections.map((sec) => {
+    const lines = sec.prefill(ctx).map((line) => {
+      const esc = escapeHtml(line).replace(
+        escapeHtml(OPEN_MARKER),
+        "<strong>" + escapeHtml(OPEN_MARKER) + "</strong>"
+      );
+      return "<p>" + esc + "</p>";
+    }).join("");
+    return "<h2>" + sec.nr + ". " + escapeHtml(sec.title) + "</h2>" +
+           "<p class='hint'>" + escapeHtml(sec.hint) + "</p>" + lines;
+  }).join("");
+
+  const footer = "<hr><p class='disclaimer'>" + escapeHtml(DISCLAIMER) + "</p>";
+
+  return "<!DOCTYPE html><html lang='nl'><head><meta charset='utf-8'>" +
+    "<title>" + escapeHtml(DPIA_TEMPLATE.docTitle) + "</title>" +
+    "<style>" +
+    "body{font-family:Georgia,serif;font-size:11pt;line-height:1.45;color:#000;max-width:17cm;}" +
+    "h1{font-size:17pt;font-weight:normal;margin:0 0 4pt;}" +
+    "h2{font-size:12.5pt;font-weight:bold;margin:14pt 0 2pt;}" +
+    ".meta{margin:0 0 10pt;}" +
+    ".intro,.hint{font-style:italic;color:#444;margin:0 0 6pt;}" +
+    "p{margin:0 0 5pt;}" +
+    ".disclaimer{font-size:9pt;color:#444;}" +
+    "</style></head><body>" + head + body + footer + "</body></html>";
+}
+
+function downloadDpia() {
+  const html = buildDpiaHtml();
+  const blob = new Blob(["﻿" + html], { type: "application/msword" });
+  const slug = (state.toolName || "tool").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "tool";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "DPIA-aanzet-" + slug + ".doc";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
 }
 
 /* ---- Platte tekst voor klembord ---- */
@@ -654,6 +907,8 @@ function initResultActions() {
   });
 
   el("btn-print").addEventListener("click", () => window.print());
+
+  el("btn-dpia").addEventListener("click", downloadDpia);
 
   el("btn-restart").addEventListener("click", () => {
     // Wis alle state uit het geheugen.
