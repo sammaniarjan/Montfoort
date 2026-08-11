@@ -25,6 +25,8 @@ geeft **geen** juridisch oordeel, hij vertaalt antwoorden naar acties.
 | `index.html`  | Semantische HTML: start-, vraag- en resultaatscherm.              |
 | `styles.css`  | Alle styling, mobile first, inclusief een schone printstylesheet. |
 | `app.js`      | Datablok (vragen + verplichtingen) **gescheiden** van de render.  |
+| `praktijk.html` | Tweede pagina: praktijkchecklist voor de organisatiebrede basis. |
+| `praktijk.js` | Datablok en render voor de praktijkchecklist.                     |
 | `og.png`      | Voorvertoning voor gedeelde links (Open Graph, 1200 bij 630).     |
 | `CNAME`       | Custom domein voor GitHub Pages (`intake.manava.nl`).             |
 | `README.md`   | Dit bestand.                                                      |
@@ -165,6 +167,17 @@ De knop "Registerregel (CSV)" downloadt één regel voor het AI-register
 (puntkomma-gescheiden, klaar voor Nederlandse Excel). De kolommen staan in
 `REGISTER_COLUMNS`; elke kolom heeft een `label` en een `value(ctx)`-functie.
 Kolommen toevoegen of hernoemen doe je alleen daar.
+
+### 9. Praktijkchecklist (`praktijk.html` + `praktijk.js`)
+
+Naast de intake per tool is er een organisatiebrede checklist: het centrale
+register, leveranciersbeheer (verwerkersovereenkomsten, EU-datalocatie,
+NEN 7510), menselijke eindverantwoordelijkheid, AI-geletterdheid, de
+datalek- en incidentprocedure en de gemotiveerde FG- en FRIA-besluiten.
+De punten staan in `PRAKTIJK_GROUPS` bovenaan `praktijk.js` (groepen met
+items: `id`, `title`, `note`). Vinkjes leven alleen in het geheugen van de
+pagina. De punten over FG en FRIA zijn bewust als uitgangspunt geformuleerd
+("in beginsel", "laat bij twijfel toetsen"), niet als juridisch oordeel.
 
 ### Een vraag toevoegen: stappenplan
 

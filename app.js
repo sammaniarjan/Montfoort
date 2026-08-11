@@ -104,6 +104,13 @@ const OBLIGATIONS = {
     askAt: "leverancier",
     letter: "Een actuele lijst van de subverwerkers die u inschakelt bij de verwerking van onze gegevens.",
   },
+  nen7510: {
+    theme: "privacy",
+    title: "Certificaat informatiebeveiliging opvragen (NEN 7510 of ISO 27001)",
+    note: "Vraag of de leverancier aantoonbaar aan een informatiebeveiligingsnorm voldoet; in de zorg is NEN 7510 de standaard.",
+    askAt: "leverancier",
+    letter: "Een geldig certificaat of aantoonbare naleving van NEN 7510 of ISO 27001 voor uw informatiebeveiliging.",
+  },
 
   // --- Medisch hulpmiddel en CE ---
   ceVerklaring: {
@@ -129,9 +136,9 @@ const OBLIGATIONS = {
     letter: "Validatiegegevens van de tool in een Nederlandse eerstelijnspopulatie, of een toelichting als die er niet zijn.",
   },
   eindverantwoordelijk: {
-    theme: "medisch",
+    theme: "beheer",
     title: "Vastleggen dat de zorgverlener de output controleert",
-    note: "Leg vast dat de zorgverlener de uitkomst controleert en eindverantwoordelijk blijft.",
+    note: "De zorgverlener blijft altijd eindverantwoordelijk, ook bij een tool met een medisch doel. Leg vast hoe de controle van de output geregeld is.",
     askAt: "eigen organisatie",
   },
   inhouseMdr: {
@@ -209,9 +216,9 @@ const QUESTIONS = [
     type: "single",
     options: [
       { value: "ja", label: "Ja",
-        grants: ["verwerkersovereenkomst", "verwerkingsregister", "grondslagBewaartermijn"] },
+        grants: ["verwerkersovereenkomst", "verwerkingsregister", "grondslagBewaartermijn", "nen7510"] },
       { value: "weet-niet", label: "Weet ik niet",
-        grants: ["verwerkersovereenkomst", "verwerkingsregister", "grondslagBewaartermijn"],
+        grants: ["verwerkersovereenkomst", "verwerkingsregister", "grondslagBewaartermijn", "nen7510"],
         note: "“Weet ik niet” telt hier als ja: zodra er tekst uit de praktijk in de tool gaat, zijn het in de praktijk bijna altijd persoonsgegevens." },
       { value: "nee", label: "Nee", grants: [] },
     ],
@@ -236,8 +243,7 @@ const QUESTIONS = [
         grants: ["validatie"] },
       { value: "twijfel", label: "Twijfel", grants: [], reask: true,
         explanation: "Het gaat om het dóél van de tool. Géén medisch doel: een consult of gesprek samenvatten. Wél een medisch doel: een advies over vervolgbeleid, een risicoscore of een triage-uitkomst. Kies op basis hiervan opnieuw." },
-      { value: "nee", label: "Nee",
-        grants: ["eindverantwoordelijk"] },
+      { value: "nee", label: "Nee", grants: [] },
     ],
   },
   {
@@ -304,7 +310,7 @@ const QUESTIONS = [
 /* -------------------------------------------------------------------------
    4. ALTIJD: verplichtingen die gelden ongeacht de antwoorden
    ------------------------------------------------------------------------- */
-const ALWAYS = ["aiRegister", "aiGeletterdheid", "eigenaarEvaluatie"];
+const ALWAYS = ["aiRegister", "aiGeletterdheid", "eigenaarEvaluatie", "eindverantwoordelijk"];
 
 
 /* -------------------------------------------------------------------------

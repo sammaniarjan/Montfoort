@@ -146,6 +146,30 @@ main.wrap { padding-left: 1.25rem; padding-right: 1.25rem; }
 }
 .btn-back-link:hover { color: var(--green-dark); text-decoration: underline; text-underline-offset: 3px; }
 .btn-back-link:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 2px; }
+a.btn-back-link { display: inline-block; text-decoration: none; }
+
+/* ---- Afvinkbare punten (praktijkchecklist) ---- */
+.check-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  cursor: pointer;
+}
+.check-label input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--green);
+  margin: 0.15rem 0 0;
+  flex: 0 0 auto;
+}
+.check-label input[type="checkbox"]:focus-visible {
+  outline: 3px solid var(--green-dark);
+  outline-offset: 2px;
+}
+.check-label .artefact-title { display: block; }
+.check-label .artefact-note { display: block; margin: 0.2rem 0 0; }
+.check-done .artefact-title { color: var(--muted); }
+.check-done .artefact-note { color: var(--muted); }
 
 /* ---- Kaarten ---- */
 .card {
@@ -448,6 +472,13 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
   background: rgba(251, 250, 246, 0.85);
   padding: 1.75rem 0 2.5rem;
 }
+.footer-links {
+  margin: 0.9rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.footer-links a { color: var(--green); font-weight: 600; text-underline-offset: 3px; }
+.footer-links a:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 2px; }
 .attribution {
   margin: 1rem 0 0;
   font-size: 0.9375rem;
