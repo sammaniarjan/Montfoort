@@ -602,8 +602,10 @@ function showScreen(name) {
   ["start", "question", "result"].forEach((s) => {
     el("screen-" + s).hidden = (s !== name);
   });
-  // Linksboven een weg terug, behalve op het startscherm zelf.
+  // Linksboven een weg terug: naar de homepage op het startscherm,
+  // opnieuw beginnen tijdens de vragen en op het resultaat.
   el("btn-restart-top").hidden = (name === "start");
+  el("link-home").hidden = (name !== "start");
   el("main").focus();
   window.scrollTo(0, 0);
 }

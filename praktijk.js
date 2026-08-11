@@ -165,11 +165,14 @@ function renderChecklist() {
         updateCounter();
       });
 
-      const text = document.createElement("span");
-      const title = document.createElement("span");
+      // Blok-elementen: ook zonder (verse) CSS staan titel en toelichting
+      // onder elkaar.
+      const text = document.createElement("div");
+      text.className = "check-text";
+      const title = document.createElement("div");
       title.className = "artefact-title";
       title.textContent = item.title;
-      const note = document.createElement("span");
+      const note = document.createElement("div");
       note.className = "artefact-note";
       note.textContent = item.note;
       text.appendChild(title);

@@ -22,7 +22,8 @@ geeft **geen** juridisch oordeel, hij vertaalt antwoorden naar acties.
 
 | Bestand       | Inhoud                                                            |
 |---------------|-------------------------------------------------------------------|
-| `index.html`  | Semantische HTML: start-, vraag- en resultaatscherm.              |
+| `index.html`  | Homepage met uitleg en de twee checklists.                        |
+| `intake.html` | De intakechecklist per tool: start-, vraag- en resultaatscherm.   |
 | `styles.css`  | Alle styling, mobile first, inclusief een schone printstylesheet. |
 | `app.js`      | Datablok (vragen + verplichtingen) **gescheiden** van de render.  |
 | `praktijk.html` | Tweede pagina: praktijkchecklist voor de organisatiebrede basis. |
@@ -191,12 +192,16 @@ pagina. De punten over FG en FRIA zijn bewust als uitgangspunt geformuleerd
 
 Het is een set statische bestanden; elke statische host werkt.
 
-- **Lokaal bekijken:** open `index.html` in een browser (dubbelklik), of serveer
-  de map, bijvoorbeeld `python3 -m http.server`.
-- **Publiceren onder een subdomein van `manava.nl`:** upload `index.html`,
-  `styles.css` en `app.js` naar de webroot van de host (of koppel de map aan
-  bijvoorbeeld Netlify, Cloudflare Pages, GitHub Pages of een eigen webserver)
-  en wijs het subdomein daarheen. Er is geen buildstap.
+- **Lokaal bekijken:** open `index.html` (homepage), `intake.html` of
+  `praktijk.html` in een browser, of serveer de map met bijvoorbeeld
+  `python3 -m http.server`.
+- **Publiceren onder een subdomein van `manava.nl`:** upload alle bestanden
+  naar de webroot van de host (of koppel de map aan bijvoorbeeld Netlify,
+  Cloudflare Pages, GitHub Pages of een eigen webserver) en wijs het
+  subdomein daarheen. Er is geen buildstap.
+- **Cache-busting:** de HTML verwijst naar `styles.css?v=2` en `app.js?v=2`.
+  Hoog dit versienummer op bij wijzigingen in CSS of JS, zodat browsers niet
+  op een oude versie blijven hangen.
 
 ### Huisstijlkleuren wijzigen
 
