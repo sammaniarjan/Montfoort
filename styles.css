@@ -44,11 +44,11 @@ body {
   line-height: 1.55;
   color: var(--ink);
   background-color: var(--paper);
+  /* Zachte, rustige achtergrond: warm papier met een lichte groene
+     gloed bovenaan in plaats van het drukke rasterpatroon. */
   background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 60px 60px;
-  background-position: center top;
+    radial-gradient(1100px 480px at 50% -120px, rgba(28, 59, 49, 0.07), transparent 70%);
+  background-repeat: no-repeat;
 }
 
 .wrap {
