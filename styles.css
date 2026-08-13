@@ -13,8 +13,8 @@
   --green-dark: #12281f;   /* donkerder: hover, focus */
   --green-soft: #eef2ee;   /* lichte tint: geselecteerde staat, ok-vlak */
 
-  --rust:       #9a3416;   /* steenrood: knoppen, accenten, aandacht */
-  --rust-dark:  #7c2911;   /* donkerder: hover */
+  --rust:       #a93b1c;   /* steenrood: knoppen, accenten, aandacht */
+  --rust-dark:  #86290e;   /* donkerder: hover */
   --rust-soft:  #f6ebe5;   /* lichte tint: rode vlaggen, waarschuwing */
 
   --ink:        #233029;   /* bodytekst */
@@ -561,3 +561,9 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
   a { color: #000; text-decoration: none; }
   @page { margin: 1.4cm; }
 }
+
+
+/* ---- Manava-beeldmerk (zelfde logo als www.manava.nl) ---- */
+.wordmark { display: inline-flex; align-items: center; gap: 0.55rem; }
+.logo-mark { height: 1.6em; width: auto; display: block; }
+.wordmark-sm .logo-mark { height: 1.2em; }
