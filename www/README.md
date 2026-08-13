@@ -9,13 +9,16 @@ Webflow.
 
 | Bestand | Inhoud |
 |---|---|
-| `index.html` | Homepage: hero met 3D-partikelanimatie, diensten, aanpak, case, checklists, artikelen, over, contact. |
-| `over-ons.html` | Over Manava en de oprichter. |
-| `ai-rapportage.html` | Case: AI-rapportage in de spreekkamer. |
+| `index.html` | Homepage: hero met 3D-partikelanimatie, partners, problemen, beloftes, diensten, referenties, checklists, contactformulier. |
+| `hoe-we-te-werk-gaan.html` | Domeinen, "we bouwen mee", cases en het 4-stappenproces. |
+| `over-ons.html` | De naam, werkwijze en het volledige team. |
+| `medtadvies.html` | Case: van schaduwinnovatie naar gestructureerde AI-rapportage. |
+| `sanofi.html` | Case: AI-diagnostiek bij Sanofi. |
 | `artikelen.html` | Artikeloverzicht. |
 | `artikelen/de-drie-schalingswetten-van-ai.html` | Artikel. |
 | `assets/style.css` | Alle styling (huisstijl als CSS-variabelen bovenaan). |
-| `assets/main.js` | Animaties: hero-canvas, scroll-reveals, 3D-tilt, nav. Respecteert `prefers-reduced-motion`. |
+| `assets/main.js` | Animaties (hero-canvas, scroll-reveals, 3D-tilt, nav) en het contactformulier. Respecteert `prefers-reduced-motion`. |
+| `assets/algemene-voorwaarden-manava-bv.pdf` | Algemene voorwaarden (lokaal gehost, geen Webflow-CDN meer). |
 
 ## Lokaal bekijken
 
@@ -41,9 +44,16 @@ Pages-site kan maar één custom domein hebben. Twee opties:
 
 ## Aandachtspunten
 
-- Het e-mailadres in de contactsectie staat op `info@manava.nl` — controleer
-  of dat het juiste adres is.
-- Teksten zijn gereconstrueerd vanuit de bestaande site; loop ze na en pas
-  aan waar gewenst. Alle content staat gewoon in de HTML-bestanden.
+- Het contactformulier heeft geen server en opent daarom het e-mailprogramma
+  van de bezoeker met een vooringevuld bericht aan `info@manava.nl`
+  (instelbaar in `assets/main.js`). Wil je echte formulier-inzendingen
+  zonder mailprogramma, koppel dan een gratis dienst als Formspree of
+  (bij hosting op Netlify) Netlify Forms: alleen het `action`-attribuut
+  van het formulier aanpassen.
+- Controleer of `info@manava.nl` het juiste adres is.
+- Partnerlogo's staan er nu als getypografeerde namen. Echte beeldmerken
+  toevoegen: zet SVG's/PNG's in `assets/logos/` en vervang de
+  `<i>`-elementen in de partnersectie van `index.html` door
+  `<img>`-tags.
 - Cache-busting: bij wijzigingen in CSS/JS het versienummer in
-  `?v=1` ophogen in alle HTML-bestanden.
+  `?v=2` ophogen in alle HTML-bestanden.

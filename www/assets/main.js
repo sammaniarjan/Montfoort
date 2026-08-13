@@ -198,6 +198,23 @@
     requestAnimationFrame(frame);
   }
 
+  /* ---------- contactformulier: opent e-mail met ingevuld bericht ---------- */
+  var form = document.getElementById("contact-form");
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var v = function (name) { return (form.elements[name] && form.elements[name].value || "").trim(); };
+      var subject = "Kennismaking via manava.nl — " + v("voornaam") + " " + v("achternaam");
+      var body = v("bericht") +
+        "\n\n—\n" + v("voornaam") + " " + v("achternaam") +
+        "\nE-mail: " + v("email") +
+        (v("telefoon") ? "\nTelefoon: " + v("telefoon") : "");
+      window.location.href = "mailto:info@manava.nl" +
+        "?subject=" + encodeURIComponent(subject) +
+        "&body=" + encodeURIComponent(body);
+    });
+  }
+
   /* ---------- huidig jaar in de footer ---------- */
   document.querySelectorAll("[data-year]").forEach(function (el) {
     el.textContent = new Date().getFullYear();
