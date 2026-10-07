@@ -4,16 +4,30 @@ Een publiek toegankelijke, statische webtool waarmee een zorgorganisatie per
 AI- of softwaretool bepaalt wat er geregeld moet zijn vóórdat die tool in
 gebruik wordt genomen en in het AI-register wordt opgenomen.
 
-De gebruiker beantwoordt een korte reeks vragen over één tool en krijgt een
-concrete lijst met te regelen artefacten terug, gegroepeerd per thema. De tool
-geeft **geen** juridisch oordeel, hij vertaalt antwoorden naar acties.
+Bedoeld voor iedereen in de zorg, ook zonder voorkennis: praktijkmanagers,
+teamleiders, bestuurders en zorgverleners. De gebruiker beantwoordt een
+korte reeks vragen in gewone taal over één tool en krijgt:
+
+1. **een oordeel bovenaan**: "Nog niet in gebruik nemen", "Nog niet gebruiken
+   met echte patiëntgegevens" (met de ontbrekende voorwaarden) of "Je kunt
+   verantwoord starten";
+2. **een stappenplan per wie**: mail de leverancier, laat de FG of een
+   privacyadviseur meekijken, regel het intern, eenmalig voor de organisatie,
+   vastleggen en starten;
+3. **afvinkbare punten**: vinkt de gebruiker een harde voorwaarde af, dan
+   verschuift het oordeel mee.
+
+De tool geeft **geen** juridisch oordeel, hij vertaalt antwoorden naar acties.
 
 ## Belangrijkste eigenschap: privacy
 
 - Geen backend, geen database, geen accounts, geen cookies, geen analytics.
 - Er worden **geen** antwoorden opgeslagen of verzonden: niet naar een server,
-  niet naar `localStorage` of `sessionStorage`. De state leeft uitsluitend in
-  het geheugen van de pagina en is weg zodra je ververst.
+  niet naar `localStorage` of `sessionStorage`. De voortgang (antwoorden,
+  vinkjes, optioneel toolnaam en leverancier) staat alleen in het `#`-deel van
+  de URL. Dat deel stuurt een browser nooit naar een server; wie de link
+  bewaart of deelt, deelt daarmee de antwoorden. Gegevens uit de link worden
+  gevalideerd tegen de vragenlijst en uitsluitend als tekst getoond.
 - Er wordt nergens om persoons- of patiëntgegevens gevraagd. Alleen de naam van
   de tool en de leverancier, en dat is optioneel.
 - Na het laden doet de pagina **geen enkel netwerkverzoek**.
@@ -52,10 +66,12 @@ Alle inhoud staat **bovenaan `app.js`**, boven de regel
 `================  RENDERLOGICA`. Daaronder hoef je niets te wijzigen om vragen
 toe te voegen of teksten te veranderen.
 
-### 1. `THEMES`
+### 1. `STEPS`
 
-De thema's waaronder artefacten op de eindlijst worden gegroepeerd, plus
-`THEME_ORDER` voor de volgorde.
+De stappen van het stappenplan, in volgorde. Elke stap hoort bij een
+`askAt`-waarde; een verplichting met die `askAt` valt in die stap. Titel en
+intro mogen een functie van de antwoorden zijn (bijvoorbeeld "jullie FG" of
+"een privacyadviseur").
 
 ### 2. `OBLIGATIONS`: de catalogus van te regelen artefacten
 
@@ -63,16 +79,15 @@ Elke verplichting heeft een unieke sleutel (`id`) en deze velden:
 
 ```js
 ceVerklaring: {
-  theme: "medisch",              // sleutel uit THEMES
-  title: "CE-verklaring en risicoklasse opvragen",   // regel op de lijst
-  note:  "Zonder CE-markering ... niet in gebruik nemen.", // één regel uitleg
-  askAt: "leverancier",          // bij wie: leverancier | FG | eigen organisatie | juridisch advies
-  redFlag: true,                 // optioneel: apart en bovenaan tonen
+  title: "Vraag de CE-markering en risicoklasse op",   // regel op de lijst, gewone taal
+  note:  "Een tool die een medisch advies geeft ...",  // korte uitleg
+  more:  "Dit volgt uit de MDR.",          // optioneel: achter "Meer uitleg"
+  link:  { href: "...", label: "..." },    // optioneel: verdieping
+  askAt: "leverancier",   // stap: leverancier | FG | eigen organisatie | organisatie | register | juridisch advies
+  letter: "De CE-verklaring ...",          // formulering in de mail aan de leverancier
+  redFlag: true,          // optioneel: bovenaan bij "Eerst uitzoeken"
 }
 ```
-
-De labels achter `askAt` staan in `ASK_AT_LABEL`. Voeg daar een sleutel toe als
-je een nieuwe partij wilt gebruiken.
 
 ### 3. `QUESTIONS`: de vragen
 
@@ -115,6 +130,20 @@ Op vraagniveau:
 ### 4. `ALWAYS`
 
 Id's van verplichtingen die altijd gelden, ongeacht de antwoorden.
+
+### 4b. `CONDITIONS`: harde voorwaarden
+
+Zolang een voorwaarde geldt en het bijbehorende actiepunt niet is
+afgevinkt, luidt het oordeel "Nog niet gebruiken met echte gegevens". Nu:
+verwerkersovereenkomst (AVG art. 28), bevestigde opslaglocatie, toets bij
+doorgifte buiten de EU (AVG hfst. V) en de beoordeling of een DPIA nodig is
+(AVG art. 35). Rode vlaggen (`redFlag: true`) geven het strengere oordeel
+"Nog niet in gebruik nemen".
+
+FG-plicht volgens de Autoriteit Persoonsgegevens: altijd voor ziekenhuizen,
+zorggroepen en huisartsenposten; voor andere zorgaanbieders bij meer dan
+10.000 ingeschreven of jaarlijks behandelde patiënten van wie de gegevens in
+één systeem staan.
 
 ### 5. `DPIA_TEMPLATE`: de downloadbare DPIA-aanzet
 

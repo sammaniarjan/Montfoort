@@ -567,3 +567,83 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .wordmark { display: inline-flex; align-items: center; gap: 0.55rem; }
 .logo-mark { height: 1.6em; width: auto; display: block; }
 .wordmark-sm .logo-mark { height: 1.2em; }
+
+
+/* ---- Oordeel bovenaan het resultaat ---- */
+.status {
+  border-radius: 6px;
+  padding: 1rem 1.15rem;
+  margin: 0 0 1rem;
+  border: 1px solid;
+}
+.status-headline {
+  margin: 0 0 0.3rem;
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+.status-sub { margin: 0; font-size: 0.975rem; }
+.status-list { margin: 0.5rem 0 0; padding-left: 1.2rem; font-size: 0.975rem; }
+.status-list li { margin: 0.25rem 0; }
+.status-tip { margin: 0.75rem 0 0; font-size: 0.9rem; font-style: italic; }
+.status-stop { background: var(--rust-soft); border-color: #e6c3b6; color: var(--rust-dark); }
+.status-wait { background: #fbf1e0; border-color: #ecd2a4; color: #6b4708; }
+.status-go   { background: var(--green-soft); border-color: #cadbcd; color: var(--green-dark); }
+.status-headline::before { margin-right: 0.45rem; }
+.status-stop .status-headline::before { content: "\25CF"; color: var(--rust); }
+.status-wait .status-headline::before { content: "\25CF"; color: #d08a1d; }
+.status-go   .status-headline::before { content: "\2713"; color: var(--green); }
+
+.done-progress { margin-top: 0.25rem; }
+.done-progress + .progress-text { margin-top: 0.4rem; }
+
+/* ---- Stappenplan ---- */
+.step-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem; }
+.step-head h3 { margin: 0; }
+.step-nr {
+  flex: 0 0 auto;
+  width: 2rem; height: 2rem;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 0.95rem;
+}
+.step-intro { margin: 0 0 0.9rem; color: var(--muted); font-size: 0.9375rem; }
+.step .artefact-list { margin-bottom: 0.25rem; }
+
+.artefact-more { margin: 0.4rem 0 0 2.05rem; font-size: 0.9rem; }
+.artefact-more summary {
+  cursor: pointer;
+  color: var(--green);
+  font-weight: 600;
+  width: fit-content;
+}
+.artefact-more summary:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 2px; }
+.artefact-more p { margin: 0.4rem 0; color: var(--ink); }
+.artefact-more a { color: var(--green); font-weight: 600; text-underline-offset: 3px; }
+
+.step-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--line);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem;
+}
+.step-actions-text { margin: 0; flex-basis: 100%; font-size: 0.9375rem; color: var(--muted); }
+.step-actions .copy-status { flex-basis: 100%; }
+
+/* ---- Bewaren en meer opties ---- */
+.actions h3 { margin: 0 0 0.3rem; }
+.more-actions { border-top: 1px solid var(--line); padding-top: 0.8rem; }
+.more-actions summary { cursor: pointer; color: var(--green); font-weight: 600; width: fit-content; }
+.more-actions-body { display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem; margin-top: 0.7rem; }
+
+.share-row { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; }
+
+@media print {
+  .status { background: #fff !important; color: #000; border: 1.5px solid #000; }
+  .status-headline::before { color: #000 !important; }
+  .step-nr { background: #fff; color: #000; border: 1px solid #000; }
+  .artefact-more, .done-progress, .share-row { display: none !important; }
+  .check-label input[type="checkbox"] { accent-color: #000; }
+}
