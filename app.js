@@ -1,11 +1,11 @@
 "use strict";
-
 /* =========================================================================
    AI-INTAKECHECKLIST VOOR DE ZORG
    -------------------------------------------------------------------------
    Alles draait client-side. Er wordt niets opgeslagen (geen localStorage,
-   sessionStorage of cookies) en niets verzonden. De state leeft uitsluitend
-   in het geheugen, in het object `state` onderaan.
+   sessionStorage of cookies) en niets verzonden. De voortgang staat alleen
+   in het #-deel van de URL van deze pagina; dat deel stuurt een browser
+   nooit naar een server.
 
    DATA-BLOK  (dit deel pas je aan om vragen of teksten te wijzigen)
    RENDER     (dit deel hoef je niet aan te raken)
@@ -13,334 +13,381 @@
 
 
 /* -------------------------------------------------------------------------
-   1. THEMA'S: waaronder de artefacten op de eindlijst worden gegroepeerd
+   1. STAPPEN: waaronder de actiepunten op het resultaat worden gegroepeerd.
+   Elke verplichting heeft een `askAt`; die bepaalt in welke stap hij valt.
+   "juridisch advies" valt niet in een stap: die punten staan bovenaan bij
+   "Eerst uitzoeken".
    ------------------------------------------------------------------------- */
-const THEMES = {
-  privacy: "Privacy en AVG",
-  medisch: "Medisch hulpmiddel en CE",
-  aiact:   "AI Act",
-  beheer:  "Registratie en beheer",
-};
-
-// Volgorde waarin de thema's op het resultaatscherm verschijnen.
-const THEME_ORDER = ["privacy", "medisch", "aiact", "beheer"];
+const STEPS = [
+  { askAt: "leverancier",
+    title: "Mail de leverancier",
+    intro: "Deze punten vraag je in één keer op. De mail hieronder zet ze voor je op een rij." },
+  { askAt: "FG",
+    title: (a) => a.fg === "ja" ? "Laat jullie FG meekijken" : "Laat een privacyadviseur meekijken",
+    intro: (a) => a.fg === "ja"
+      ? "Je functionaris gegevensbescherming (FG) beoordeelt deze punten."
+      : "Heeft jullie organisatie geen FG? Vraag dan een privacyadviseur om deze punten te beoordelen." },
+  { askAt: "eigen organisatie",
+    title: "Regel het binnen jullie organisatie",
+    intro: "Afspraken die je zelf maakt en kort vastlegt." },
+  { askAt: "organisatie",
+    title: "Eenmalig voor de hele organisatie",
+    intro: "Dit regel je één keer, niet per tool. De praktijkchecklist helpt je verder." },
+  { askAt: "register",
+    title: "Vastleggen en starten",
+    intro: "Leg de tool vast. Daarna kun je verantwoord beginnen." },
+];
 
 
 /* -------------------------------------------------------------------------
-   2. VERPLICHTINGEN (artefacten)
-   Eén catalogus, verwijzingen via id. Zo staat elke tekst op één plek en
-   kunnen meerdere antwoorden naar dezelfde verplichting wijzen.
-
-     theme   : sleutel uit THEMES
-     title   : de regel die op de lijst komt
-     note    : één regel toelichting in gewone taal (gericht aan de gebruiker)
-     askAt   : bij wie je het opvraagt/regelt (optioneel)
-     letter  : formulering voor in de opvraagbrief, gericht aan de leverancier
-               (alleen bij askAt "leverancier")
-     redFlag : true = wordt apart en bovenaan getoond
+   2. VERPLICHTINGEN (actiepunten)
+   Eén catalogus, verwijzingen via id.
+     title   : de regel op de lijst, in gewone taal
+     note    : één of twee zinnen uitleg
+     more    : optioneel; achtergrond, wetsartikel, tips (achter "Meer uitleg")
+     link    : optioneel; { href, label } voor verdieping
+     askAt   : leverancier | FG | eigen organisatie | organisatie | register
+               | juridisch advies
+     letter  : formulering voor de mail aan de leverancier
+     redFlag : true = apart en bovenaan, tool nog niet in gebruik nemen
    ------------------------------------------------------------------------- */
 const OBLIGATIONS = {
-  // --- Privacy en AVG ---
+  // --- Bij de leverancier ---
   verwerkersovereenkomst: {
-    theme: "privacy",
-    title: "Verwerkersovereenkomst sluiten met de leverancier",
-    note: "Leg schriftelijk vast welke gegevens de leverancier voor je verwerkt en onder welke voorwaarden.",
+    title: "Sluit een privacycontract met de leverancier (verwerkersovereenkomst)",
+    note: "Hierin spreek je af wat de leverancier met jullie gegevens mag doen en hoe hij ze beschermt. Leveranciers hebben vaak een standaardversie: vraag erom.",
+    more: "Verplicht onder de AVG (artikel 28) zodra een leverancier persoonsgegevens voor jullie verwerkt. Zonder dit contract mag je geen persoonsgegevens in de tool stoppen.",
     askAt: "leverancier",
     letter: "Een verwerkersovereenkomst, met daarin welke gegevens u voor ons verwerkt en onder welke voorwaarden.",
   },
-  verwerkingsregister: {
-    theme: "privacy",
-    title: "Opnemen in het verwerkingsregister",
-    note: "Voeg de verwerking toe aan het register van verwerkingsactiviteiten van de praktijk.",
-    askAt: "eigen organisatie",
-  },
-  grondslagBewaartermijn: {
-    theme: "privacy",
-    title: "Grondslag en bewaartermijn vastleggen",
-    note: "Bepaal op welke grondslag je de gegevens verwerkt en hoe lang je ze bewaart.",
-    askAt: "eigen organisatie",
-  },
-  dpiaToets: {
-    theme: "privacy",
-    title: "DPIA-toets (pre-scan) uitvoeren",
-    note: "Ga na of een DPIA nodig is: een korte inschatting van het risico voor betrokkenen.",
-    askAt: "FG",
-  },
-  dpiaVolledig: {
-    theme: "privacy",
-    title: "Volledige DPIA uitvoeren bij hoog risico",
-    note: "Bij hoog risico: een onderbouwd oordeel over risico's en maatregelen. Laat dit inhoudelijk beoordelen.",
-    askAt: "FG",
-  },
-  beveiligingToegang: {
-    theme: "privacy",
-    title: "Beveiligingsmaatregelen en toegangsrechten vastleggen",
-    note: "Leg vast hoe de gegevens beveiligd zijn en wie er bij mag, passend bij gezondheidsgegevens.",
-    askAt: "eigen organisatie",
-  },
-  fgVerplicht: {
-    theme: "privacy",
-    title: "Nagaan of een FG verplicht is",
-    note: "Bij grootschalige verwerking van gezondheidsgegevens is een FG wettelijk verplicht. Vuistregel van de Autoriteit Persoonsgegevens voor huisartsenpraktijken: meer dan 10.000 patiënten.",
-    askAt: "eigen organisatie",
-  },
-  doorgiftetoets: {
-    theme: "privacy",
-    title: "Doorgiftetoets uitvoeren",
-    note: "Bij verwerking buiten de EU: beoordeel of de doorgifte is toegestaan en welke waarborgen nodig zijn.",
-    askAt: "FG",
-  },
   hostinglocatie: {
-    theme: "privacy",
-    title: "Hostinglocatie schriftelijk laten bevestigen",
-    note: "Vraag de leverancier schriftelijk waar de gegevens fysiek worden opgeslagen en verwerkt.",
+    title: "Laat de leverancier bevestigen waar de gegevens staan",
+    note: "Vraag schriftelijk in welk land de gegevens worden opgeslagen en verwerkt.",
+    more: "Blijkt het buiten de EU te zijn? Pas dan je antwoord bij die vraag aan; dan komt er een extra stap bij.",
     askAt: "leverancier",
-    letter: "Een schriftelijke bevestiging van de locatie waar de gegevens worden opgeslagen en verwerkt.",
+    letter: "Een schriftelijke bevestiging van het land of de landen waar de gegevens worden opgeslagen en verwerkt.",
+  },
+  training: {
+    title: "Vraag of jullie gegevens worden gebruikt om de AI te trainen",
+    note: "Sommige leveranciers gebruiken wat je invoert om hun AI te verbeteren. Met patiëntgegevens wil je dat niet, of alleen met duidelijke afspraken.",
+    askAt: "leverancier",
+    letter: "Een bevestiging of de gegevens die wij invoeren worden bewaard of gebruikt om (AI-)modellen te trainen, en zo ja, hoe wij dat kunnen uitzetten.",
   },
   subverwerkers: {
-    theme: "privacy",
-    title: "Actuele subverwerkerslijst opvragen",
-    note: "Vraag welke andere partijen de leverancier inschakelt om jouw gegevens te verwerken.",
+    title: "Vraag welke andere bedrijven de leverancier inschakelt",
+    note: "Leveranciers werken vaak zelf weer met andere partijen, bijvoorbeeld voor de opslag of het AI-model. Je hebt recht op die lijst.",
+    more: "In AVG-termen heten dit subverwerkers.",
     askAt: "leverancier",
-    letter: "Een actuele lijst van de subverwerkers die u inschakelt bij de verwerking van onze gegevens.",
+    letter: "Een actuele lijst van de partijen (subverwerkers) die u inschakelt bij de verwerking van onze gegevens.",
   },
   nen7510: {
-    theme: "privacy",
-    title: "Certificaat informatiebeveiliging opvragen (NEN 7510 of ISO 27001)",
-    note: "Vraag of de leverancier aantoonbaar aan een informatiebeveiligingsnorm voldoet; in de zorg is NEN 7510 de standaard.",
+    title: "Vraag naar het beveiligingscertificaat van de leverancier",
+    note: "Vraag of de leverancier aantoonbaar goed is beveiligd. In de zorg is NEN 7510 de norm; ISO 27001 is de internationale variant.",
     askAt: "leverancier",
     letter: "Een geldig certificaat of aantoonbare naleving van NEN 7510 of ISO 27001 voor uw informatiebeveiliging.",
   },
-
-  // --- Medisch hulpmiddel en CE ---
   ceVerklaring: {
-    theme: "medisch",
-    title: "CE-verklaring en risicoklasse opvragen",
-    note: "Zonder CE-markering voor een medisch doel: niet in gebruik nemen. Vraag de verklaring en de risicoklasse op.",
+    title: "Vraag de CE-markering en risicoklasse op",
+    note: "Een tool die een medisch advies of uitkomst geeft, is een medisch hulpmiddel en moet een CE-markering hebben. Zonder CE-markering: niet in gebruik nemen.",
+    more: "Dit volgt uit de Europese regels voor medische hulpmiddelen (MDR).",
     askAt: "leverancier",
-    letter: "De CE-verklaring van de tool en de bijbehorende risicoklasse.",
+    letter: "De CE-verklaring van de tool als medisch hulpmiddel en de bijbehorende risicoklasse.",
     redFlag: true,
   },
   ceBekend: {
-    theme: "medisch",
-    title: "CE-verklaring en risicoklasse vastleggen",
-    note: "De CE-markering is al bekend. Vraag de verklaring op als je die nog niet in bezit hebt en leg de risicoklasse vast in het register.",
+    title: "Bewaar de CE-verklaring en noteer de risicoklasse",
+    note: "De CE-markering is bekend. Vraag de verklaring op als je die nog niet hebt, en zet de risicoklasse in je AI-overzicht.",
     askAt: "leverancier",
     letter: "De CE-verklaring van de tool en de bijbehorende risicoklasse, ter vastlegging in ons register.",
   },
   validatie: {
-    theme: "medisch",
-    title: "Validatiegegevens in een Nederlandse eerstelijnspopulatie opvragen",
-    note: "Vraag of de tool is gevalideerd in een populatie die op jouw patiënten lijkt, niet alleen in het buitenland.",
+    title: "Vraag of de tool getest is bij patiënten zoals de jouwe",
+    note: "Een tool die goed werkt in een buitenlands ziekenhuis, werkt niet vanzelf goed bij jullie. Vraag naar resultaten in een vergelijkbare Nederlandse patiëntengroep.",
+    more: "Let op: een hoge 'accuracy' zegt weinig als de aandoening bij jullie zeldzaam is. Dan kan het merendeel van de alarmen alsnog loos zijn.",
+    link: { href: "https://www.manava.nl/accuracy-uitgelegd.html", label: "Lees: hoe goed is 99% accuraat?" },
     askAt: "leverancier",
-    letter: "Validatiegegevens van de tool in een Nederlandse eerstelijnspopulatie, of een toelichting als die er niet zijn.",
-  },
-  eindverantwoordelijk: {
-    theme: "beheer",
-    title: "Vastleggen dat de zorgverlener de output controleert",
-    note: "De zorgverlener blijft altijd eindverantwoordelijk, ook bij een tool met een medisch doel. Leg vast hoe de controle van de output geregeld is.",
-    askAt: "eigen organisatie",
-  },
-  inhouseMdr: {
-    theme: "medisch",
-    title: "Toets aan de in-house uitzondering (MDR artikel 5 lid 5)",
-    note: "Bij een zelfgebouwde of aangepaste tool met een medisch doel: beoordeel of de in-house uitzondering geldt. Win eerst juridisch advies in.",
-    askAt: "juridisch advies",
-    redFlag: true,
+    letter: "Validatiegegevens van de tool in een Nederlandse patiëntengroep die vergelijkbaar is met de onze, of een toelichting als die er niet zijn.",
   },
 
-  // --- AI Act ---
-  transparantieAi: {
-    theme: "aiact",
-    title: "Kenbaar maken dat het om AI gaat",
-    note: "Transparantieplicht (AI Act artikel 50): maak duidelijk dat de patiënt met AI-gegenereerde tekst te maken heeft.",
+  // --- Met de FG of een privacyadviseur ---
+  dpia: {
+    title: "Laat beoordelen of een DPIA nodig is, en voer hem zo nodig uit",
+    note: "Een DPIA is een risicoanalyse voor privacy. Bij gezondheidsgegevens en nieuwe technologie zoals AI is die vaak verplicht, en moet hij klaar zijn vóórdat je begint.",
+    more: "AVG artikel 35. Hieronder kun je een aanzet downloaden met je antwoorden alvast ingevuld.",
+    askAt: "FG",
+  },
+  doorgiftetoets: {
+    title: "Laat toetsen of de gegevens buiten de EU mogen",
+    note: "Gegevens naar een land buiten de EU sturen mag alleen met extra waarborgen. Laat dit beoordelen voordat je begint.",
+    more: "AVG hoofdstuk V. Voor de Verenigde Staten kan het EU-US Data Privacy Framework gelden, als de leverancier daarvoor is aangemeld.",
+    askAt: "FG",
+  },
+  grondslag: {
+    title: "Leg vast waarom je de gegevens mag gebruiken en hoe lang je ze bewaart",
+    note: "Schrijf in een paar zinnen op waarvoor de tool gegevens gebruikt, en wanneer ze weer worden verwijderd.",
+    more: "In AVG-termen: de grondslag (artikel 6 en 9) en de bewaartermijn. Bij zorgverlening hangt de grondslag meestal samen met de behandelrelatie; laat dit bij twijfel bevestigen.",
+    askAt: "FG",
+  },
+
+  // --- Binnen de eigen organisatie ---
+  verwerkingsregister: {
+    title: "Zet de tool in jullie verwerkingsregister",
+    note: "Dat is de lijst waarin jullie bijhouden welke persoonsgegevens waarvoor worden gebruikt. Voeg deze tool eraan toe.",
+    more: "Verplicht onder de AVG (artikel 30). Nog geen register? Dat staat in de praktijkchecklist.",
     askAt: "eigen organisatie",
   },
-  dossierVermelding: {
-    theme: "aiact",
-    title: "Afspraak over vermelding van AI-gebruik in het dossier",
-    note: "Spreek af hoe je in het dossier noteert dat AI is gebruikt bij deze patiënt.",
+  beveiliging: {
+    title: "Bepaal wie in de tool mag en hoe die is beveiligd",
+    note: "Wie krijgt een account, met welke rechten? Staat inloggen in twee stappen aan? Leg het kort vast.",
+    more: "Gezondheidsgegevens vragen extra beveiliging (AVG artikel 32).",
+    askAt: "eigen organisatie",
+  },
+  eindverantwoordelijk: {
+    title: "Spreek af dat een zorgverlener de uitkomst altijd controleert",
+    note: "De tool doet een voorstel; een mens blijft verantwoordelijk. Leg vast wie controleert en hoe.",
     askAt: "eigen organisatie",
   },
   aiGeletterdheid: {
-    theme: "aiact",
-    title: "Betrokken medewerkers instrueren over wat de tool wel en niet kan",
-    note: "AI-geletterdheid (AI Act artikel 4): zorg dat gebruikers de mogelijkheden én grenzen van de tool kennen.",
+    title: "Leg collega's uit wat de tool wel en niet kan",
+    note: "Wie met de tool werkt, moet weten waar hij goed in is, waar hij fouten maakt en wat je altijd zelf moet nakijken.",
+    more: "Verplicht onder de AI-verordening (AI Act, artikel 4: AI-geletterdheid), sinds februari 2025.",
     askAt: "eigen organisatie",
   },
-  aanbiedersrol: {
-    theme: "aiact",
-    title: "Mogelijke aanbiedersrol onder de AI Act, geen gebruiksverantwoordelijke",
-    note: "Door zelf bouwen of wezenlijk aanpassen kun je 'aanbieder' worden, met zwaardere plichten. Win eerst juridisch advies in.",
+  transparantieAi: {
+    title: "Vertel patiënten dat ze met AI te maken hebben",
+    note: "Bijvoorbeeld met een korte zin bij de chatbot of onder de brief: 'Deze tekst is mede opgesteld met behulp van AI.'",
+    more: "Verplicht onder de AI-verordening (AI Act, artikel 50).",
+    askAt: "eigen organisatie",
+  },
+  dossierVermelding: {
+    title: "Spreek af hoe je AI-gebruik in het dossier noteert",
+    note: "Zo is later terug te zien bij welke patiënt en waarvoor AI is gebruikt.",
+    askAt: "eigen organisatie",
+  },
+
+  // --- Eenmalig voor de organisatie ---
+  fgCheck: {
+    title: "Ga na of jullie organisatie een FG moet hebben",
+    note: "Een functionaris gegevensbescherming (FG) houdt binnen de organisatie toezicht op privacy. Niet elke zorgorganisatie is verplicht er een te hebben.",
+    more: "Volgens de Autoriteit Persoonsgegevens moeten ziekenhuizen, zorggroepen en huisartsenposten altijd een FG hebben. Andere zorgaanbieders moeten dat als ze meer dan 10.000 patiënten ingeschreven hebben of gemiddeld meer dan 10.000 patiënten per jaar behandelen, en die gegevens in één systeem staan. Leg je besluit vast.",
+    link: { href: "https://autoriteitpersoonsgegevens.nl/nl/onderwerpen/gezondheid/zorgverleners-en-de-avg", label: "Uitleg van de Autoriteit Persoonsgegevens" },
+    askAt: "organisatie",
+  },
+
+  // --- Vastleggen ---
+  aiRegister: {
+    title: "Zet de tool in jullie AI-overzicht (AI-register)",
+    note: "Een simpel overzicht van alle AI-tools in de organisatie: wat, waarvoor en wie de eigenaar is. Hieronder kun je de regel voor deze tool downloaden.",
+    askAt: "register",
+  },
+  eigenaarEvaluatie: {
+    title: "Kies een eigenaar en een datum om de tool opnieuw te bekijken",
+    note: "Bijvoorbeeld over een jaar: werkt hij nog goed, en is er iets veranderd bij de leverancier?",
+    askAt: "register",
+  },
+
+  // --- Eerst juridisch uitzoeken ---
+  inhouseMdr: {
+    title: "Laat juridisch toetsen of je een zelfgebouwde medische tool mag inzetten",
+    note: "Zelf bouwen of flink aanpassen met een medisch doel valt onder strenge regels. Er is een uitzondering voor eigen gebruik, maar die heeft voorwaarden.",
+    more: "Het gaat om de zogeheten in-house uitzondering uit de MDR (artikel 5 lid 5).",
     askAt: "juridisch advies",
     redFlag: true,
   },
-
-  // --- Registratie en beheer ---
-  aiRegister: {
-    theme: "beheer",
-    title: "Opnemen in het AI-register",
-    note: "Neem de tool op in het AI-register van de organisatie.",
-    askAt: "eigen organisatie",
-  },
-  eigenaarEvaluatie: {
-    theme: "beheer",
-    title: "Eigenaar en evaluatiedatum vastleggen in het register",
-    note: "Leg vast wie binnen de organisatie eigenaar is en wanneer de tool opnieuw wordt beoordeeld.",
-    askAt: "eigen organisatie",
+  aanbiedersrol: {
+    title: "Laat juridisch uitzoeken of jullie 'aanbieder' van de AI worden",
+    note: "Wie een AI-tool zelf bouwt, of flink aanpast en onder eigen naam gebruikt, krijgt onder de AI-verordening zwaardere plichten dan een gewone gebruiker.",
+    askAt: "juridisch advies",
+    redFlag: true,
   },
 };
 
 
 /* -------------------------------------------------------------------------
    3. VRAGEN
-   Elke vraag heeft opties; elke optie kent 'grants': de id's van
-   verplichtingen die dat antwoord activeert.
-
      id            : unieke sleutel; onder deze sleutel bewaren we het antwoord
      text          : de vraag
      help          : optionele toelichting onder de vraag
      type          : "single" (keuze) of "text" (vrij tekstveld)
-     showIf(a)     : optioneel; toon de vraag alleen als dit true is (a = antwoorden)
+     showIf(a)     : optioneel; toon de vraag alleen als dit true is
      options[]     : { value, label, grants[], note?, reask?, explanation? }
-                       - note        : toelichting die bij dit antwoord hoort
-                       - reask       : true = toon uitleg en stel de vraag opnieuw
-                       - explanation : tekst bij een reask-antwoord
-     dynamicGrants(a): optioneel; extra verplichtingen op basis van álle antwoorden
-     placeholder   : hint-tekst voor een tekstveld (type "text")
+     dynamicGrants(a): optioneel; extra verplichtingen op basis van alle antwoorden
    ------------------------------------------------------------------------- */
+const personalData = (a) => a.v1 === "ja" || a.v1 === "weet-niet";
+
 const QUESTIONS = [
   {
     id: "v1",
-    text: "Worden er persoonsgegevens verwerkt?",
+    text: "Gaat er informatie over mensen in de tool?",
+    help: "Denk aan namen, geboortedata, gesprekken, verslagen, foto's of e-mails. Ook zonder naam is informatie vaak nog terug te leiden naar een persoon.",
     type: "single",
     options: [
       { value: "ja", label: "Ja",
-        grants: ["verwerkersovereenkomst", "verwerkingsregister", "grondslagBewaartermijn", "nen7510"] },
+        grants: ["verwerkersovereenkomst", "training", "verwerkingsregister", "grondslag", "nen7510", "subverwerkers"] },
       { value: "weet-niet", label: "Weet ik niet",
-        grants: ["verwerkersovereenkomst", "verwerkingsregister", "grondslagBewaartermijn", "nen7510"],
-        note: "“Weet ik niet” telt hier als ja: zodra er tekst uit de praktijk in de tool gaat, zijn het in de praktijk bijna altijd persoonsgegevens." },
+        grants: ["verwerkersovereenkomst", "training", "verwerkingsregister", "grondslag", "nen7510", "subverwerkers"],
+        note: "Dan gaan we uit van ja. Zodra er tekst uit de zorg in de tool gaat, gaat het bijna altijd om informatie over mensen." },
       { value: "nee", label: "Nee", grants: [] },
     ],
   },
   {
     id: "v2",
-    text: "Gaat het om patiënt- of gezondheidsgegevens?",
-    showIf: (a) => a.v1 === "ja" || a.v1 === "weet-niet",
+    text: "Gaat het om patiënten of cliënten, of om iemands gezondheid?",
+    showIf: personalData,
     type: "single",
     options: [
-      { value: "ja", label: "Ja",
-        grants: ["dpiaToets", "dpiaVolledig", "beveiligingToegang", "fgVerplicht"] },
-      { value: "nee", label: "Nee", grants: [] },
+      { value: "ja", label: "Ja", grants: ["dpia", "beveiliging"] },
+      { value: "nee", label: "Nee, bijvoorbeeld alleen over medewerkers", grants: [] },
+    ],
+  },
+  {
+    id: "vo",
+    text: "Is er al een privacycontract met de leverancier getekend?",
+    help: "Dit heet een verwerkersovereenkomst. Hierin spreek je af wat de leverancier met jullie gegevens mag doen.",
+    showIf: personalData,
+    type: "single",
+    options: [
+      { value: "ja", label: "Ja, die is getekend", grants: [] },
+      { value: "nee", label: "Nee, nog niet", grants: [] },
+      { value: "weet-niet", label: "Weet ik niet", grants: [],
+        note: "Dan gaan we ervan uit dat die er nog niet is. Vraag het na bij wie de tool heeft ingekocht." },
     ],
   },
   {
     id: "v3",
-    text: "Heeft de tool een medisch doel, zoals triage, diagnostiek, risicoscore of behandeladvies?",
+    text: "Geeft de tool een advies of uitkomst over de gezondheid van een patiënt?",
+    help: "Bijvoorbeeld een diagnose, een risicoscore, een triage-uitkomst of een behandeladvies. Een gesprek samenvatten of een brief schrijven telt niet.",
     type: "single",
     options: [
-      { value: "ja", label: "Ja",
-        grants: ["validatie"] },
+      { value: "ja", label: "Ja", grants: ["validatie"] },
       { value: "twijfel", label: "Twijfel", grants: [], reask: true,
-        explanation: "Het gaat om het dóél van de tool. Géén medisch doel: een consult of gesprek samenvatten. Wél een medisch doel: een advies over vervolgbeleid, een risicoscore of een triage-uitkomst. Kies op basis hiervan opnieuw." },
+        explanation: "Het gaat om wat de tool doet. Geen medisch doel: een consult samenvatten of een brief opstellen. Wel een medisch doel: advies over vervolgbeleid, een risicoscore of een triage-uitkomst. Kies op basis hiervan opnieuw." },
       { value: "nee", label: "Nee", grants: [] },
     ],
   },
   {
     id: "v3a",
-    text: "Is al bekend dat de tool een CE-markering als medisch hulpmiddel heeft?",
-    help: "Bijvoorbeeld een gecertificeerd ECG-apparaat of gevestigde medische software waarvan de CE-markering en risicoklasse bekend zijn.",
+    text: "Heeft de tool een CE-markering als medisch hulpmiddel, en weet je de risicoklasse?",
+    help: "Staat vaak op de website of in de documentatie van de leverancier, bijvoorbeeld als 'CE klasse IIa'.",
     showIf: (a) => a.v3 === "ja",
     type: "single",
     options: [
-      { value: "ja", label: "Ja, inclusief risicoklasse",
-        grants: ["ceBekend"],
-        note: "Dan is dit geen blokkade. Leg de CE-verklaring en risicoklasse vast in het register." },
-      { value: "nee", label: "Nee, of dat weet ik niet",
-        grants: ["ceVerklaring"],
-        note: "Zolang de CE-markering niet bevestigd is: niet in gebruik nemen. Vraag de verklaring en risicoklasse op." },
+      { value: "ja", label: "Ja, inclusief risicoklasse", grants: ["ceBekend"],
+        note: "Dan is dit geen blokkade. Bewaar de CE-verklaring en noteer de risicoklasse." },
+      { value: "nee", label: "Nee, of weet ik niet", grants: ["ceVerklaring"],
+        note: "Zolang dat niet bevestigd is: niet in gebruik nemen. De vraag komt in de mail aan de leverancier." },
     ],
   },
   {
     id: "v4",
-    text: "Is de tool zichtbaar voor de patiënt, of ziet de patiënt gegenereerde tekst?",
+    text: "Ziet of leest de patiënt iets wat de tool maakt?",
+    help: "Bijvoorbeeld een chatbot op de website, of een brief of uitslag die de tool (mede) schrijft.",
     type: "single",
     options: [
-      { value: "ja", label: "Ja",
-        grants: ["transparantieAi", "dossierVermelding"] },
+      { value: "ja", label: "Ja", grants: ["transparantieAi", "dossierVermelding"] },
       { value: "nee", label: "Nee", grants: [] },
     ],
   },
   {
     id: "v5",
-    text: "Waar draaien de gegevens?",
+    text: "Weet je waar de leverancier de gegevens bewaart?",
+    help: "Staat vaak in de verwerkersovereenkomst of de privacyverklaring van de leverancier. Weet je het niet? Geen probleem: dan komt de vraag in de mail aan de leverancier.",
+    showIf: personalData,
     type: "single",
     options: [
-      { value: "binnen-eu", label: "Binnen de EU",
-        grants: ["subverwerkers"] },
-      { value: "buiten-eu", label: "Buiten de EU",
-        grants: ["doorgiftetoets", "hostinglocatie", "subverwerkers"] },
-      { value: "onbekend", label: "Onbekend",
-        grants: ["doorgiftetoets", "hostinglocatie", "subverwerkers"],
-        note: "Onbekend telt hier als “buiten de EU”: zolang de locatie niet bevestigd is, ga je uit van het strengere scenario." },
+      { value: "binnen-eu", label: "Ja, binnen de EU", grants: [] },
+      { value: "buiten-eu", label: "Ja, (ook) buiten de EU", grants: ["hostinglocatie", "doorgiftetoets"] },
+      { value: "onbekend", label: "Weet ik niet", grants: ["hostinglocatie"] },
     ],
   },
   {
     id: "v6",
-    text: "Is de tool zelf gebouwd of wezenlijk aangepast en onder eigen naam in gebruik genomen?",
-    help: "Denk aan: zelf een AI-toepassing bouwen, of een bestaande tool zo aanpassen dat je hem onder je eigen naam aanbiedt.",
+    text: "Heeft jullie organisatie de tool zelf gebouwd, of flink aangepast en onder eigen naam in gebruik?",
+    help: "Voor de meeste organisaties is het antwoord nee: je koopt een tool van een leverancier en gebruikt hem zoals hij is.",
     type: "single",
     options: [
       { value: "nee", label: "Nee", grants: [] },
       { value: "ja", label: "Ja", grants: ["aanbiedersrol"] },
     ],
-    // Bij een medisch doel (v3 = ja) komt de MDR-toets er als extra rode vlag bij.
     dynamicGrants: (a) => (a.v6 === "ja" && a.v3 === "ja") ? ["inhouseMdr"] : [],
   },
   {
+    id: "fg",
+    text: "Heeft jullie organisatie een functionaris gegevensbescherming (FG)?",
+    help: "Een FG houdt binnen de organisatie toezicht op privacy. Ziekenhuizen, zorggroepen en huisartsenposten hebben er altijd een; kleinere praktijken vaak niet.",
+    showIf: personalData,
+    type: "single",
+    options: [
+      { value: "ja", label: "Ja", grants: [] },
+      { value: "nee", label: "Nee", grants: ["fgCheck"] },
+      { value: "weet-niet", label: "Weet ik niet", grants: ["fgCheck"] },
+    ],
+  },
+  {
     id: "v7",
-    text: "Wie binnen de organisatie is eigenaar van deze tool?",
-    help: "Optioneel. Vul uitsluitend een rol in, bijvoorbeeld “praktijkmanager”. Geen namen.",
+    text: "Wie wordt eigenaar van deze tool binnen jullie organisatie?",
+    help: "Optioneel. Vul alleen een rol in, bijvoorbeeld 'praktijkmanager' of 'teamleider'. Geen namen.",
     type: "text",
     placeholder: "Bijvoorbeeld: praktijkmanager",
   },
 ];
 
+// Het privacycontract staat op de lijst, behalve als het al getekend is.
+const VO_ID = "verwerkersovereenkomst";
+
 
 /* -------------------------------------------------------------------------
    4. ALTIJD: verplichtingen die gelden ongeacht de antwoorden
    ------------------------------------------------------------------------- */
-const ALWAYS = ["aiRegister", "aiGeletterdheid", "eigenaarEvaluatie", "eindverantwoordelijk"];
+const ALWAYS = ["aiGeletterdheid", "eindverantwoordelijk", "aiRegister", "eigenaarEvaluatie"];
 
 
 /* -------------------------------------------------------------------------
-   5. DPIA-AANZET
-   Wordt aangeboden als download zodra de antwoorden een DPIA-toets opleveren
-   (vraag 2 = ja). De indeling volgt het Model DPIA Rijksdienst. Per onderdeel:
-
-     nr      : nummer in het model
-     title   : titel van het onderdeel
-     hint    : wat hier ingevuld moet worden, in gewone taal
-     prefill : functie (ctx) => regels die we al kunnen invullen op basis van
-               de antwoorden; ctx = { answers, toolName, vendorName }
-
-   Regels die de praktijk zelf moet invullen markeren we met OPEN_MARKER.
-   Het document wordt volledig in de browser opgebouwd; er wordt niets
-   opgehaald of verzonden.
+   5. HARDE VOORWAARDEN
+   Zolang deze open staan, is het oordeel: nog niet gebruiken met echte
+   gegevens. Elke voorwaarde hoort bij een actiepunt; vink je dat af, dan
+   vervalt de voorwaarde.
+     when(a) : geldt deze voorwaarde bij deze antwoorden?
+     id      : het bijbehorende actiepunt
+     text    : wat er nog ontbreekt, in gewone taal
    ------------------------------------------------------------------------- */
-const OPEN_MARKER = "[Nog invullen door de praktijk]";
+const CONDITIONS = [
+  { id: "verwerkersovereenkomst",
+    when: (a) => personalData(a) && a.vo !== "ja",
+    text: "Er is nog geen privacycontract (verwerkersovereenkomst) met de leverancier." },
+  { id: "hostinglocatie",
+    when: (a) => personalData(a) && a.v5 === "onbekend",
+    text: "Het is nog niet bevestigd waar de gegevens worden bewaard." },
+  { id: "doorgiftetoets",
+    when: (a) => personalData(a) && a.v5 === "buiten-eu",
+    text: "De gegevens gaan (ook) buiten de EU. Laat eerst toetsen of dat mag." },
+  { id: "dpia",
+    when: (a) => personalData(a) && a.v2 === "ja",
+    text: "Er is nog niet beoordeeld of een DPIA (privacy-risicoanalyse) nodig is." },
+];
+
+
+/* -------------------------------------------------------------------------
+   6. DPIA-AANZET
+   Wordt aangeboden zodra het actiepunt "dpia" op de lijst staat. De indeling
+   volgt het Model DPIA Rijksdienst. Per onderdeel:
+     nr, title, hint, prefill(ctx) => regels; ctx = { answers, toolName, vendorName }
+   Regels die de organisatie zelf moet invullen markeren we met OPEN_MARKER.
+   ------------------------------------------------------------------------- */
+const OPEN_MARKER = "[Nog invullen door de organisatie]";
 
 const DPIA_TEMPLATE = {
   docTitle: "Aanzet voor een DPIA",
   modelRef:
     "Deze aanzet volgt de indeling van het Model DPIA Rijksdienst. Het is een " +
-    "voorzet op basis van de intake-checklist, geen ingevulde DPIA. De " +
+    "voorzet op basis van de intakechecklist, geen ingevulde DPIA. De " +
     "beoordeling van risico's en maatregelen vraagt om een inhoudelijk oordeel " +
-    "van de praktijk, samen met de functionaris gegevensbescherming (FG). " +
-    "Heeft de organisatie geen FG, betrek dan een externe privacyadviseur. Ga " +
-    "daarbij ook na of een FG verplicht is: bij grootschalige verwerking van " +
-    "gezondheidsgegevens is dat wettelijk vereist, met als vuistregel van de " +
-    "Autoriteit Persoonsgegevens voor huisartsenpraktijken meer dan 10.000 patiënten.",
+    "van de organisatie, samen met de functionaris gegevensbescherming (FG). " +
+    "Heeft de organisatie geen FG, betrek dan een externe privacyadviseur. " +
+    "Volgens de Autoriteit Persoonsgegevens is een FG verplicht voor " +
+    "ziekenhuizen, zorggroepen en huisartsenposten, en voor andere " +
+    "zorgaanbieders met meer dan 10.000 ingeschreven of jaarlijks behandelde " +
+    "patiënten van wie de gegevens in één systeem staan.",
   sections: [
     {
       nr: 1, title: "Voorstel",
@@ -351,23 +398,23 @@ const DPIA_TEMPLATE = {
         if (ctx.vendorName) r.push("Leverancier: " + ctx.vendorName);
         r.push(ctx.answers.v3 === "ja"
           ? "De tool heeft volgens de intake een medisch doel (triage, diagnostiek, risicoscore of behandeladvies)."
-          : "De tool heeft volgens de intake geen medisch doel; de zorgverlener controleert de output en blijft eindverantwoordelijk.");
+          : "De tool heeft volgens de intake geen medisch doel; een zorgverlener controleert de uitkomst en blijft verantwoordelijk.");
         r.push("Doel en gewenste werking: " + OPEN_MARKER);
         return r;
       },
     },
     {
       nr: 2, title: "Persoonsgegevens",
-      hint: "Welke categorieën persoonsgegevens gaan er in de tool, van wie, en hoe gevoelig zijn ze?",
+      hint: "Welke soorten persoonsgegevens gaan er in de tool, van wie, en hoe gevoelig zijn ze?",
       prefill: (ctx) => {
         const r = [];
         if (ctx.answers.v1 === "weet-niet") {
-          r.push("Bij de intake was onduidelijk of er persoonsgegevens worden verwerkt. Uitgangspunt is dat dit wel zo is zodra er tekst uit de praktijk in de tool gaat. Stel dit eerst definitief vast.");
+          r.push("Bij de intake was onduidelijk of er persoonsgegevens worden verwerkt. Uitgangspunt is dat dit wel zo is zodra er tekst uit de zorg in de tool gaat. Stel dit eerst definitief vast.");
         }
         if (ctx.answers.v2 === "ja") {
           r.push("Er worden patiënt- of gezondheidsgegevens verwerkt. Dit zijn bijzondere persoonsgegevens (artikel 9 AVG).");
         }
-        r.push("Precieze categorieën gegevens en betrokkenen: " + OPEN_MARKER);
+        r.push("Precieze soorten gegevens en betrokkenen: " + OPEN_MARKER);
         return r;
       },
     },
@@ -387,6 +434,9 @@ const DPIA_TEMPLATE = {
       prefill: (ctx) => {
         const r = ["Verwerkingsverantwoordelijke: de eigen organisatie."];
         if (ctx.vendorName) r.push("Beoogd verwerker: " + ctx.vendorName + ".");
+        r.push(ctx.answers.vo === "ja"
+          ? "Volgens de intake is er een verwerkersovereenkomst getekend."
+          : "Volgens de intake is er nog geen verwerkersovereenkomst getekend.");
         r.push("Vraag de actuele subverwerkerslijst op bij de leverancier en neem die hier op. " + OPEN_MARKER);
         return r;
       },
@@ -401,22 +451,18 @@ const DPIA_TEMPLATE = {
       hint: "Waar worden de gegevens opgeslagen en verwerkt, en vindt er doorgifte buiten de EU plaats?",
       prefill: (ctx) => {
         const v5 = ctx.answers.v5;
-        if (v5 === "binnen-eu") return ["Volgens de intake draaien de gegevens binnen de EU. Laat de hostinglocatie schriftelijk bevestigen door de leverancier."];
-        return [
-          v5 === "buiten-eu"
-            ? "Volgens de intake draaien de gegevens buiten de EU."
-            : "Bij de intake was de verwerkingslocatie onbekend. Uitgangspunt tot bevestiging: buiten de EU.",
-          "Voer een doorgiftetoets uit en laat de hostinglocatie schriftelijk bevestigen. " + OPEN_MARKER,
-        ];
+        if (v5 === "binnen-eu") return ["Volgens de intake worden de gegevens binnen de EU bewaard. Laat dit schriftelijk bevestigen door de leverancier."];
+        if (v5 === "buiten-eu") return ["Volgens de intake gaan de gegevens (ook) buiten de EU.", "Voer een doorgiftetoets uit. " + OPEN_MARKER];
+        return ["Bij de intake was de verwerkingslocatie onbekend. Laat die eerst schriftelijk bevestigen. " + OPEN_MARKER];
       },
     },
     {
       nr: 8, title: "Technieken en methoden",
-      hint: "Welke techniek gebruikt de tool (AI-model, beslisregels) en hoe komt de output tot stand?",
+      hint: "Welke techniek gebruikt de tool (AI-model, beslisregels) en hoe komt de uitkomst tot stand?",
       prefill: (ctx) => {
-        const r = ["Het gaat om een AI-toepassing. Beschrijf het type model en hoe de output tot stand komt. " + OPEN_MARKER];
+        const r = ["Het gaat om een AI-toepassing. Beschrijf het type model en hoe de uitkomst tot stand komt. " + OPEN_MARKER];
         if (ctx.answers.v6 === "ja") {
-          r.push("Let op: de tool is zelf gebouwd of wezenlijk aangepast. Mogelijk geldt een aanbiedersrol onder de AI Act. Win eerst juridisch advies in.");
+          r.push("Let op: de tool is zelf gebouwd of flink aangepast. Mogelijk geldt een aanbiedersrol onder de AI Act. Win eerst juridisch advies in.");
         }
         return r;
       },
@@ -465,7 +511,7 @@ const DPIA_TEMPLATE = {
       prefill: (ctx) => {
         const r = [];
         if (ctx.answers.v4 === "ja") {
-          r.push("De patiënt ziet de tool of door de tool gegenereerde tekst. Regel hoe kenbaar wordt gemaakt dat het om AI gaat en hoe AI-gebruik in het dossier wordt vermeld.");
+          r.push("De patiënt ziet de tool of tekst die de tool maakt. Regel hoe kenbaar wordt gemaakt dat het om AI gaat en hoe AI-gebruik in het dossier wordt vermeld.");
         }
         r.push("Informatievoorziening en uitoefening van rechten: " + OPEN_MARKER);
         return r;
@@ -477,9 +523,9 @@ const DPIA_TEMPLATE = {
       prefill: (ctx) => {
         const r = ["Aandachtspunten uit de intake om in de risicoanalyse te betrekken:"];
         if (ctx.answers.v2 === "ja") r.push("- Gevoeligheid: het gaat om gezondheidsgegevens.");
-        if (ctx.answers.v3 === "ja") r.push("- Medisch doel: risico op onjuiste of niet-gevalideerde output met gevolgen voor de zorg.");
+        if (ctx.answers.v3 === "ja") r.push("- Medisch doel: risico op onjuiste of niet-gevalideerde uitkomsten met gevolgen voor de zorg.");
         if (ctx.answers.v5 !== "binnen-eu") r.push("- Verwerkingslocatie buiten de EU of onbekend.");
-        if (ctx.answers.v6 === "ja") r.push("- Zelfbouw of wezenlijke aanpassing van de tool.");
+        if (ctx.answers.v6 === "ja") r.push("- Zelfbouw of flinke aanpassing van de tool.");
         r.push("Volledige risicobeoordeling (kans en impact per risico): " + OPEN_MARKER);
         return r;
       },
@@ -488,7 +534,7 @@ const DPIA_TEMPLATE = {
       nr: 17, title: "Maatregelen",
       hint: "Welke maatregelen beperken de risico's, wie voert ze uit en wanneer?",
       prefill: () => [
-        "Neem de actielijst uit de intake-checklist als startpunt en vul aan per risico uit onderdeel 16.",
+        "Neem de actielijst uit de intakechecklist als startpunt en vul aan per risico uit onderdeel 16.",
         "Maatregelen, eigenaar en planning: " + OPEN_MARKER,
       ],
     },
@@ -497,25 +543,26 @@ const DPIA_TEMPLATE = {
 
 
 /* -------------------------------------------------------------------------
-   6. VOORBEELDPROFIELEN (startscherm)
+   7. VOORBEELDPROFIELEN (startscherm)
    Vooringevulde antwoorden als startpunt; de gebruiker loopt daarna alle
-   vragen gewoon na en kan alles aanpassen. Generieke categorieën, geen
-   productnamen. v5 staat bewust op "onbekend": dat dwingt tot navragen.
+   vragen gewoon na. Generieke categorieën, geen productnamen. Locatie en
+   contract staan bewust op "weet ik niet": dat dwingt tot navragen.
    ------------------------------------------------------------------------- */
 const PROFILES = [
-  { label: "Schrijf- of samenvattingsassistent",
-    answers: { v1: "ja", v2: "ja", v3: "nee", v4: "nee", v5: "onbekend", v6: "nee" } },
+  { label: "AI die meeluistert en het verslag schrijft",
+    answers: { v1: "ja", v2: "ja", vo: "weet-niet", v3: "nee", v4: "nee", v5: "onbekend", v6: "nee" } },
+  { label: "Schrijfhulp voor brieven en e-mails",
+    answers: { v1: "ja", v2: "ja", vo: "weet-niet", v3: "nee", v4: "ja", v5: "onbekend", v6: "nee" } },
   { label: "Chatbot op de website",
-    answers: { v1: "ja", v2: "ja", v3: "nee", v4: "ja", v5: "onbekend", v6: "nee" } },
-  { label: "Triage- of risicoscore-tool",
-    answers: { v1: "ja", v2: "ja", v3: "ja", v4: "nee", v5: "onbekend", v6: "nee" } },
+    answers: { v1: "ja", v2: "ja", vo: "weet-niet", v3: "nee", v4: "ja", v5: "onbekend", v6: "nee" } },
+  { label: "Tool die een risicoscore of triage-advies geeft",
+    answers: { v1: "ja", v2: "ja", vo: "weet-niet", v3: "ja", v3a: "nee", v4: "nee", v5: "onbekend", v6: "nee" } },
 ];
 
 
 /* -------------------------------------------------------------------------
-   7. OPVRAAGBRIEF VOOR DE LEVERANCIER
-   Wordt aangeboden zodra minstens één actiepunt bij de leverancier ligt
-   (askAt: "leverancier"). De lijst met punten komt uit de intake zelf.
+   8. MAIL AAN DE LEVERANCIER
+   De punten komen uit de intake: alle actiepunten met askAt "leverancier".
    ------------------------------------------------------------------------- */
 const LETTER = {
   subject: (ctx) => "Aanvraag documenten voor " + (ctx.toolName || "een AI-tool"),
@@ -524,8 +571,8 @@ const LETTER = {
     "Onze organisatie bereidt de ingebruikname voor van " +
     (ctx.toolName ? ctx.toolName : "een AI-tool") +
     (ctx.vendorName ? " van " + ctx.vendorName : "") +
-    ". Onderdeel van onze intake is dat wij een aantal documenten en " +
-    "bevestigingen van u als leverancier ontvangen. Het gaat om de volgende punten:",
+    ". Voordat we de tool in gebruik nemen, ontvangen we graag de " +
+    "volgende documenten en bevestigingen van u:",
   outro:
     "Wij ontvangen deze stukken graag schriftelijk. Zonder deze informatie " +
     "kunnen wij de tool niet in gebruik nemen. Alvast dank voor uw reactie.",
@@ -534,11 +581,8 @@ const LETTER = {
 
 
 /* -------------------------------------------------------------------------
-   8. REGISTERREGEL (CSV-download voor het AI-register)
-   Kolommen voor één regel in het AI-register, te plakken of te importeren
-   in Excel. Puntkomma als scheidingsteken (Nederlandse Excel-instelling).
-   ctx = { answers, toolName, vendorName, date, evalDate, flags, openItems,
-           conclusion, answerLabel }
+   9. REGISTERREGEL (CSV-download voor het AI-register)
+   Puntkomma als scheidingsteken (Nederlandse Excel-instelling).
    ------------------------------------------------------------------------- */
 const REGISTER_COLUMNS = [
   { label: "Tool",                     value: (c) => c.toolName },
@@ -547,31 +591,40 @@ const REGISTER_COLUMNS = [
   { label: "Datum intake",             value: (c) => c.date },
   { label: "Persoonsgegevens",         value: (c) => c.answerLabel("v1") },
   { label: "Gezondheidsgegevens",      value: (c) => c.answerLabel("v2") },
+  { label: "Verwerkersovereenkomst",   value: (c) => c.answerLabel("vo") },
   { label: "Medisch doel",             value: (c) => c.answerLabel("v3") },
   { label: "CE-markering bekend",      value: (c) => c.answerLabel("v3a") },
   { label: "Zichtbaar voor patiënt",   value: (c) => c.answerLabel("v4") },
   { label: "Verwerkingslocatie",       value: (c) => c.answerLabel("v5") },
   { label: "Zelfbouw of aangepast",    value: (c) => c.answerLabel("v6") },
-  { label: "Rode vlaggen",             value: (c) => c.flags.map((f) => f.title).join(" | ") },
-  { label: "Te regelen acties",        value: (c) => c.openItems.map((o) => o.title).join(" | ") },
-  { label: "Conclusie",                value: (c) => c.conclusion },
+  { label: "Status",                   value: (c) => c.statusText },
+  { label: "Nog te regelen",           value: (c) => c.openItems.map((o) => o.title).join(" | ") },
   { label: "Evaluatiedatum",           value: (c) => c.evalDate },
 ];
 
 
 /* -------------------------------------------------------------------------
-   9. VASTE TEKSTEN
+   10. VASTE TEKSTEN
    ------------------------------------------------------------------------- */
 const DISCLAIMER =
   "Dit is een hulpmiddel om te bepalen wat er geregeld moet worden. Het is geen " +
   "juridisch advies en geen vervanging van een DPIA. Een DPIA is een onderbouwd " +
   "oordeel over risico's en maatregelen en vraagt om een inhoudelijke beoordeling.";
 
-const ASK_AT_LABEL = {
-  "leverancier": "Opvragen bij de leverancier",
-  "FG": "Regelen met de FG, of zonder FG met een privacyadviseur",
-  "eigen organisatie": "Regelen binnen de eigen organisatie",
-  "juridisch advies": "Eerst juridisch advies inwinnen",
+const STATUS = {
+  stop: {
+    headline: "Nog niet in gebruik nemen",
+    sub: "Er moet eerst iets fundamenteels worden uitgezocht. Zie 'Eerst uitzoeken' hieronder.",
+  },
+  wait: {
+    headline: (a) => "Nog niet gebruiken met echte " + (a.v2 === "ja" ? "patiëntgegevens" : "persoonsgegevens"),
+    sub: "Dit moet eerst geregeld zijn:",
+    tip: "Tip: in de tussentijd kun je de tool al uitproberen met verzonnen voorbeelden, zonder echte gegevens.",
+  },
+  go: {
+    headline: "Je kunt verantwoord starten",
+    sub: "Er zijn geen blokkades. Rond de stappen hieronder af en vink af wat klaar is.",
+  },
 };
 
 
@@ -583,11 +636,13 @@ const state = {
   answers: {},      // { v1: "ja", v2: "nee", ... , v7: "praktijkmanager" }
   toolName: "",
   vendorName: "",
+  checked: new Set(),
   stepIndex: 0,     // positie binnen QUESTIONS
   pendingReask: false,
 };
 
 const el = (id) => document.getElementById(id);
+const resolve = (v) => (typeof v === "function" ? v(state.answers) : v);
 
 /* ---- Zichtbaarheid & navigatie ---- */
 function isVisible(q) {
@@ -602,21 +657,21 @@ function showScreen(name) {
   ["start", "question", "result"].forEach((s) => {
     el("screen-" + s).hidden = (s !== name);
   });
-  // Linksboven een weg terug: naar de homepage op het startscherm,
-  // opnieuw beginnen tijdens de vragen en op het resultaat.
   el("btn-restart-top").hidden = (name === "start");
   el("link-home").hidden = (name !== "start");
   el("main").focus();
   window.scrollTo(0, 0);
 }
 
-/* Wis alle state uit het geheugen en keer terug naar het startscherm. */
+/* Wis alle state en keer terug naar het startscherm. */
 function restartTool() {
   state.answers = {};
   state.toolName = "";
   state.vendorName = "";
+  state.checked = new Set();
   state.stepIndex = 0;
   el("start-form").reset();
+  history.replaceState(null, "", location.pathname + location.search);
   showScreen("start");
 }
 
@@ -629,7 +684,6 @@ function initStart() {
     startWizard(null);
   });
 
-  // Voorbeeldprofielen als startpunt.
   const chips = el("profile-chips");
   PROFILES.forEach((p) => {
     const btn = document.createElement("button");
@@ -639,26 +693,38 @@ function initStart() {
     btn.addEventListener("click", () => startWizard(p));
     chips.appendChild(btn);
   });
+
+  const share = el("btn-share");
+  if (share) {
+    share.addEventListener("click", async () => {
+      const url = location.origin + location.pathname;
+      const data = { title: "AI-intakechecklist voor de zorg", text: "Mag deze AI-tool in gebruik? Check het in een paar minuten.", url };
+      if (navigator.share) {
+        try { await navigator.share(data); return; } catch (e) { /* geannuleerd */ }
+      }
+      await copyText(url);
+      flashStatus("share-status", "Link gekopieerd.");
+    });
+  }
 }
 
-/* Start de vragenlijst, optioneel met een vooringevuld profiel. */
 function startWizard(profile) {
   state.toolName = el("tool-name").value.trim();
   state.vendorName = el("vendor-name").value.trim();
   state.answers = profile ? { ...profile.answers } : {};
+  state.checked = new Set();
   state.stepIndex = firstVisibleIndex(0, +1);
   renderQuestion();
   showScreen("question");
 }
 
-/* Zoek de eerstvolgende zichtbare vraag vanaf `from` in richting `dir`. */
 function firstVisibleIndex(from, dir) {
   let i = from;
   while (i >= 0 && i < QUESTIONS.length) {
     if (isVisible(QUESTIONS[i])) return i;
     i += dir;
   }
-  return i; // buiten bereik = klaar (vooruit) of start (achteruit)
+  return i;
 }
 
 /* ---- Vraagscherm ---- */
@@ -666,7 +732,6 @@ function renderQuestion() {
   const q = QUESTIONS[state.stepIndex];
   state.pendingReask = false;
 
-  // Voortgang (op basis van zichtbare vragen).
   const vis = visibleQuestions();
   const pos = vis.indexOf(q) + 1;
   const total = vis.length;
@@ -691,7 +756,6 @@ function renderQuestion() {
     optionsWrap.hidden = true;
     textWrap.hidden = false;
     el("q-text-label").textContent = q.text;
-    el("q-text-label").setAttribute("for", "q-textinput");
     const input = el("q-textinput");
     input.value = state.answers[q.id] || "";
     input.placeholder = q.placeholder || "";
@@ -700,7 +764,7 @@ function renderQuestion() {
     textWrap.hidden = true;
     optionsWrap.hidden = false;
     const current = state.answers[q.id];
-    q.options.forEach((opt, idx) => {
+    q.options.forEach((opt) => {
       const optId = q.id + "-" + opt.value;
       const label = document.createElement("label");
       label.className = "option";
@@ -722,7 +786,6 @@ function renderQuestion() {
       label.appendChild(span);
       optionsWrap.appendChild(label);
     });
-    // Focus de eerste optie voor toetsenbordbediening.
     setTimeout(() => {
       const first = optionsWrap.querySelector("input");
       if (first) first.focus();
@@ -732,7 +795,6 @@ function renderQuestion() {
   el("btn-back").hidden = (firstVisibleIndex(state.stepIndex - 1, -1) < 0);
 }
 
-/* Reactie op het kiezen van een optie: toon eventueel uitleg (reask) of note. */
 function onOptionChange(q, opt) {
   const explanation = el("q-explanation");
   if (opt.reask && opt.explanation) {
@@ -762,7 +824,7 @@ function goNext() {
   const q = QUESTIONS[state.stepIndex];
 
   if (q.type === "text") {
-    state.answers[q.id] = el("q-textinput").value.trim();
+    state.answers[q.id] = el("q-textinput").value.trim().slice(0, 80);
   } else {
     const checked = document.querySelector('input[name="' + q.id + '"]:checked');
     if (!checked) {
@@ -771,7 +833,6 @@ function goNext() {
     }
     const opt = q.options.find((o) => o.value === checked.value);
     if (opt && opt.reask) {
-      // Twijfel: blijf op de vraag, toon uitleg, vraag opnieuw.
       onOptionChange(q, opt);
       flashHint("Kies op basis van de uitleg alsnog ja of nee.");
       return;
@@ -797,7 +858,6 @@ function goBack() {
   renderQuestion();
 }
 
-/* Als een eerder antwoord een vraag onzichtbaar maakt, wis het foutieve pad. */
 function clearHiddenAnswers() {
   QUESTIONS.forEach((q) => {
     if (!isVisible(q) && q.id in state.answers) delete state.answers[q.id];
@@ -810,7 +870,7 @@ function flashHint(msg) {
   explanation.hidden = false;
 }
 
-/* ---- Verzamel verplichtingen op basis van de antwoorden ---- */
+/* ---- Verzamel actiepunten op basis van de antwoorden ---- */
 function collectObligationIds() {
   const ids = new Set(ALWAYS);
   visibleQuestions().forEach((q) => {
@@ -823,102 +883,217 @@ function collectObligationIds() {
       q.dynamicGrants(state.answers).forEach((g) => ids.add(g));
     }
   });
-  return [...ids];
+  if (state.answers.vo === "ja") ids.delete(VO_ID);
+  return [...ids].filter((id) => OBLIGATIONS[id]);
+}
+
+function grantedObligations() {
+  return collectObligationIds().map((id) => ({ id, ...OBLIGATIONS[id] }));
+}
+
+function vendorItems() {
+  return grantedObligations().filter((o) => o.askAt === "leverancier");
+}
+
+/* ---- Oordeel ---- */
+function computeStatus() {
+  const items = grantedObligations();
+  const openFlags = items.filter((it) => it.redFlag && !state.checked.has(it.id));
+  const openConditions = CONDITIONS.filter((c) =>
+    c.when(state.answers) && !state.checked.has(c.id));
+  const level = openFlags.length ? "stop" : (openConditions.length ? "wait" : "go");
+  return { level, openFlags, openConditions };
+}
+
+function statusHeadline(level) {
+  return resolve(STATUS[level].headline);
 }
 
 /* ---- Resultaatscherm ---- */
 function renderResult() {
-  const ids = collectObligationIds();
-  const items = ids.map((id) => ({ id, ...OBLIGATIONS[id] }));
-
+  const items = grantedObligations();
   const flags = items.filter((it) => it.redFlag);
-  const regular = items.filter((it) => !it.redFlag);
 
-  // Onderwerpregel.
   const subjectParts = [];
   if (state.toolName) subjectParts.push("Tool: " + state.toolName);
   if (state.vendorName) subjectParts.push("Leverancier: " + state.vendorName);
   if (state.answers.v7) subjectParts.push("Eigenaar: " + state.answers.v7);
   el("result-subject").textContent = subjectParts.join("  ·  ");
   el("result-subject").hidden = subjectParts.length === 0;
-
-  // Conclusie in één zin.
-  const conclusionEl = el("result-conclusion");
-  conclusionEl.textContent = conclusionText(flags.length > 0);
-  conclusionEl.className = flags.length > 0 ? "conclusion conclusion-warn" : "conclusion conclusion-ok";
-
-  // Datum voor de printversie.
   el("result-date").textContent = "Ingevuld op " + todayNl();
 
-  // Rode vlaggen.
+  // Eerst uitzoeken.
   const flagsCard = el("result-flags");
-  if (flags.length > 0) {
-    flagsCard.hidden = false;
-    el("flags-list").innerHTML = "";
-    flags.forEach((it) => el("flags-list").appendChild(renderArtefact(it)));
-  } else {
-    flagsCard.hidden = true;
-  }
+  flagsCard.hidden = flags.length === 0;
+  el("flags-list").innerHTML = "";
+  flags.forEach((it) => el("flags-list").appendChild(renderItem(it)));
 
-  // DPIA-aanzet aanbieden zodra een DPIA-toets aan de orde is.
-  el("result-dpia").hidden = !dpiaIsRelevant();
+  // Stappenplan, gegroepeerd op wie het regelt. De actieknoppen gaan eerst
+  // terug naar hun verborgen houder, zodat ze het leegmaken overleven.
+  const holder = el("action-holder");
+  ["letter-actions", "dpia-actions", "register-actions"].forEach((id) => holder.appendChild(el(id)));
+  const stepsWrap = el("result-steps");
+  stepsWrap.innerHTML = "";
+  let nr = 0;
+  STEPS.forEach((step) => {
+    const conditionIds = CONDITIONS.filter((c) => c.when(state.answers)).map((c) => c.id);
+    const stepItems = items.filter((it) => it.askAt === step.askAt && !it.redFlag)
+      .sort((a, b) => conditionIds.includes(b.id) - conditionIds.includes(a.id));
+    const vendorStepWithFlag = step.askAt === "leverancier" && vendorItems().length > 0;
+    if (stepItems.length === 0 && !vendorStepWithFlag) return;
+    nr += 1;
 
-  // Opvraagbrief aanbieden zodra er iets bij de leverancier ligt.
-  el("result-letter").hidden = vendorItems().length === 0;
+    const card = document.createElement("section");
+    card.className = "card step";
 
-  // Reguliere artefacten, gegroepeerd per thema.
-  const groupsWrap = el("result-groups");
-  groupsWrap.innerHTML = "";
-  THEME_ORDER.forEach((themeKey) => {
-    const groupItems = regular.filter((it) => it.theme === themeKey);
-    if (groupItems.length === 0) return;
-
-    const card = document.createElement("div");
-    card.className = "card group";
-
+    const head = document.createElement("div");
+    head.className = "step-head";
+    const num = document.createElement("span");
+    num.className = "step-nr";
+    num.textContent = String(nr);
     const h3 = document.createElement("h3");
-    h3.textContent = THEMES[themeKey];
-    card.appendChild(h3);
+    h3.textContent = resolve(step.title);
+    head.appendChild(num);
+    head.appendChild(h3);
+    card.appendChild(head);
 
-    const ul = document.createElement("ul");
-    ul.className = "artefact-list";
-    groupItems.forEach((it) => ul.appendChild(renderArtefact(it)));
-    card.appendChild(ul);
+    const intro = document.createElement("p");
+    intro.className = "step-intro";
+    intro.textContent = resolve(step.intro);
+    card.appendChild(intro);
 
-    groupsWrap.appendChild(card);
+    if (stepItems.length) {
+      const ul = document.createElement("ul");
+      ul.className = "artefact-list";
+      stepItems.forEach((it) => ul.appendChild(renderItem(it)));
+      card.appendChild(ul);
+    }
+
+    // Acties horen bij de stap waar ze nodig zijn.
+    if (step.askAt === "leverancier") card.appendChild(el("letter-actions"));
+    if (step.askAt === "FG" && items.some((it) => it.id === "dpia")) card.appendChild(el("dpia-actions"));
+    if (step.askAt === "register") card.appendChild(el("register-actions"));
+
+    stepsWrap.appendChild(card);
   });
+
+  renderStatus();
+  syncHash();
 }
 
-function renderArtefact(it) {
+function renderItem(it) {
   const li = document.createElement("li");
-  li.className = "artefact";
+  li.className = "artefact" + (state.checked.has(it.id) ? " check-done" : "");
 
-  const title = document.createElement("p");
+  const label = document.createElement("label");
+  label.className = "check-label";
+  const box = document.createElement("input");
+  box.type = "checkbox";
+  box.checked = state.checked.has(it.id);
+  box.addEventListener("change", () => {
+    if (box.checked) state.checked.add(it.id); else state.checked.delete(it.id);
+    li.classList.toggle("check-done", box.checked);
+    renderStatus();
+    syncHash();
+  });
+  const text = document.createElement("span");
+  const title = document.createElement("span");
   title.className = "artefact-title";
   title.textContent = it.title;
-  li.appendChild(title);
-
-  const note = document.createElement("p");
+  const note = document.createElement("span");
   note.className = "artefact-note";
   note.textContent = it.note;
-  li.appendChild(note);
+  text.appendChild(title);
+  text.appendChild(note);
+  label.appendChild(box);
+  label.appendChild(text);
+  li.appendChild(label);
 
-  if (it.askAt && ASK_AT_LABEL[it.askAt]) {
-    const ask = document.createElement("p");
-    ask.className = "artefact-ask";
-    ask.textContent = ASK_AT_LABEL[it.askAt];
-    li.appendChild(ask);
+  if (it.more || it.link) {
+    const det = document.createElement("details");
+    det.className = "artefact-more";
+    const sum = document.createElement("summary");
+    sum.textContent = "Meer uitleg";
+    det.appendChild(sum);
+    if (it.more) {
+      const p = document.createElement("p");
+      p.textContent = it.more;
+      det.appendChild(p);
+    }
+    if (it.link) {
+      const a = document.createElement("a");
+      a.href = it.link.href;
+      a.rel = "noopener";
+      a.target = "_blank";
+      a.textContent = it.link.label;
+      det.appendChild(a);
+    }
+    li.appendChild(det);
   }
   return li;
 }
 
-/* ---- Gedeelde helpers voor uitvoer ---- */
-function conclusionText(hasFlags) {
-  return hasFlags
-    ? "Nog niet klaar voor het register: zoek eerst de rode vlaggen uit voordat je deze tool in gebruik neemt."
-    : "Geen rode vlaggen. Regel onderstaande punten, leg ze vast en neem de tool op in het AI-register.";
+function renderStatus() {
+  const s = computeStatus();
+  const box = el("result-status");
+  box.className = "status status-" + s.level;
+  el("status-headline").textContent = statusHeadline(s.level);
+  el("status-sub").textContent = STATUS[s.level].sub;
+
+  const list = el("status-list");
+  list.innerHTML = "";
+  if (s.level === "wait") {
+    s.openConditions.forEach((c) => {
+      const li = document.createElement("li");
+      li.textContent = c.text;
+      list.appendChild(li);
+    });
+  }
+  list.hidden = s.level !== "wait";
+  el("status-tip").textContent = s.level === "wait" ? STATUS.wait.tip : "";
+  el("status-tip").hidden = s.level !== "wait";
+
+  // Voortgang.
+  const all = grantedObligations();
+  const done = all.filter((it) => state.checked.has(it.id)).length;
+  el("progress-done-fill").style.width = (all.length ? done / all.length * 100 : 0) + "%";
+  el("progress-done-text").textContent = done + " van " + all.length + " punten afgevinkt";
 }
 
+/* ---- Voortgang in de link (#) ---- */
+function syncHash() {
+  const p = new URLSearchParams();
+  QUESTIONS.forEach((q) => {
+    if (state.answers[q.id]) p.set(q.id, state.answers[q.id]);
+  });
+  if (state.toolName) p.set("t", state.toolName);
+  if (state.vendorName) p.set("l", state.vendorName);
+  if (state.checked.size) p.set("c", [...state.checked].join(","));
+  history.replaceState(null, "", "#" + p.toString());
+}
+
+function restoreFromHash() {
+  if (!location.hash || location.hash.length < 3) return false;
+  const p = new URLSearchParams(location.hash.slice(1));
+  const answers = {};
+  QUESTIONS.forEach((q) => {
+    const v = p.get(q.id);
+    if (v == null) return;
+    if (q.type === "text") answers[q.id] = v.slice(0, 80);
+    else if (q.options.some((o) => o.value === v && !o.reask)) answers[q.id] = v;
+  });
+  if (!answers.v1) return false;
+  state.answers = answers;
+  state.toolName = (p.get("t") || "").slice(0, 80);
+  state.vendorName = (p.get("l") || "").slice(0, 80);
+  state.checked = new Set((p.get("c") || "").split(",").filter((id) => OBLIGATIONS[id]));
+  clearHiddenAnswers();
+  renderResult();
+  showScreen("result");
+  return true;
+}
+
+/* ---- Gedeelde helpers voor uitvoer ---- */
 function todayNl() {
   return new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
 }
@@ -928,14 +1103,6 @@ function answerLabel(qid) {
   if (!q || q.type !== "single") return "";
   const opt = q.options.find((o) => o.value === state.answers[qid]);
   return opt ? opt.label : "";
-}
-
-function grantedObligations() {
-  return collectObligationIds().map((id) => ({ id, ...OBLIGATIONS[id] }));
-}
-
-function vendorItems() {
-  return grantedObligations().filter((o) => o.askAt === "leverancier");
 }
 
 function downloadBlob(content, mime, filename) {
@@ -954,7 +1121,24 @@ function fileSlug() {
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "tool";
 }
 
-/* ---- Opvraagbrief voor de leverancier ---- */
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch (e) { /* val terug */ }
+  legacyCopy(text);
+}
+
+function flashStatus(id, msg) {
+  const s = el(id);
+  if (!s) return;
+  s.textContent = msg;
+  setTimeout(() => { s.textContent = ""; }, 4000);
+}
+
+/* ---- Mail aan de leverancier ---- */
 function buildLetterText() {
   const ctx = { toolName: state.toolName, vendorName: state.vendorName };
   const lines = [];
@@ -982,7 +1166,6 @@ function mailtoLetter() {
 /* ---- Registerregel als CSV ---- */
 function registerContext() {
   const items = grantedObligations();
-  const flags = items.filter((it) => it.redFlag);
   const evalDate = new Date();
   evalDate.setFullYear(evalDate.getFullYear() + 1);
   return {
@@ -991,9 +1174,8 @@ function registerContext() {
     vendorName: state.vendorName,
     date: todayNl(),
     evalDate: evalDate.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }),
-    flags,
-    openItems: items.filter((it) => !it.redFlag),
-    conclusion: conclusionText(flags.length > 0),
+    openItems: items.filter((it) => !state.checked.has(it.id)),
+    statusText: statusHeadline(computeStatus().level),
     answerLabel,
   };
 }
@@ -1016,18 +1198,9 @@ function escapeHtml(s) {
   }[c]));
 }
 
-function dpiaContext() {
-  return { answers: state.answers, toolName: state.toolName, vendorName: state.vendorName };
-}
-
-function dpiaIsRelevant() {
-  const ids = collectObligationIds();
-  return ids.includes("dpiaToets") || ids.includes("dpiaVolledig");
-}
-
 function buildDpiaHtml() {
-  const ctx = dpiaContext();
-  const datum = new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+  const ctx = { answers: state.answers, toolName: state.toolName, vendorName: state.vendorName };
+  const datum = todayNl();
 
   const head =
     "<h1>" + escapeHtml(DPIA_TEMPLATE.docTitle) + "</h1>" +
@@ -1072,10 +1245,9 @@ function downloadDpia() {
 
 /* ---- Platte tekst voor klembord ---- */
 function buildPlainText() {
-  const ids = collectObligationIds();
-  const items = ids.map((id) => ({ id, ...OBLIGATIONS[id] }));
+  const items = grantedObligations();
   const flags = items.filter((it) => it.redFlag);
-  const regular = items.filter((it) => !it.redFlag);
+  const s = computeStatus();
 
   const lines = [];
   lines.push("AI-INTAKECHECKLIST");
@@ -1083,87 +1255,68 @@ function buildPlainText() {
   if (state.vendorName) lines.push("Leverancier: " + state.vendorName);
   if (state.answers.v7) lines.push("Eigenaar: " + state.answers.v7);
   lines.push("");
-
-  lines.push(el("result-conclusion").textContent);
+  lines.push(statusHeadline(s.level).toUpperCase());
+  if (s.level === "wait") s.openConditions.forEach((c) => lines.push("- " + c.text));
   lines.push("");
 
-  if (flags.length > 0) {
-    lines.push("RODE VLAGGEN: EERST UITZOEKEN");
-    flags.forEach((it) => pushArtefactLines(lines, it));
+  if (flags.length) {
+    lines.push("EERST UITZOEKEN");
+    flags.forEach((it) => pushItemLines(lines, it));
     lines.push("");
   }
 
-  THEME_ORDER.forEach((themeKey) => {
-    const groupItems = regular.filter((it) => it.theme === themeKey);
-    if (groupItems.length === 0) return;
-    lines.push(THEMES[themeKey].toUpperCase());
-    groupItems.forEach((it) => pushArtefactLines(lines, it));
+  let nr = 0;
+  STEPS.forEach((step) => {
+    const stepItems = items.filter((it) => it.askAt === step.askAt && !it.redFlag);
+    if (!stepItems.length) return;
+    nr += 1;
+    lines.push("STAP " + nr + ": " + resolve(step.title).toUpperCase());
+    stepItems.forEach((it) => pushItemLines(lines, it));
     lines.push("");
   });
 
+  lines.push("Verder werken aan deze checklist: " + location.href);
   lines.push("---");
   lines.push(DISCLAIMER);
   return lines.join("\n");
 }
 
-function pushArtefactLines(lines, it) {
-  lines.push("- " + it.title);
-  lines.push("  " + it.note);
-  if (it.askAt && ASK_AT_LABEL[it.askAt]) lines.push("  (" + ASK_AT_LABEL[it.askAt] + ")");
+function pushItemLines(lines, it) {
+  lines.push((state.checked.has(it.id) ? "[x] " : "[ ] ") + it.title);
+  lines.push("    " + it.note);
 }
 
 /* ---- Acties op het resultaatscherm ---- */
 function initResultActions() {
   el("btn-copy").addEventListener("click", async () => {
-    const text = buildPlainText();
-    const status = el("copy-status");
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        legacyCopy(text);
-      }
-      status.textContent = "Gekopieerd naar het klembord.";
-    } catch (err) {
-      legacyCopy(text);
-      status.textContent = "Gekopieerd naar het klembord.";
-    }
-    setTimeout(() => { status.textContent = ""; }, 4000);
+    await copyText(buildPlainText());
+    flashStatus("copy-status", "Gekopieerd naar het klembord.");
+  });
+
+  el("btn-link").addEventListener("click", async () => {
+    syncHash();
+    await copyText(location.href);
+    flashStatus("link-status", "Link gekopieerd. Bewaar of deel hem om later verder te gaan.");
   });
 
   el("btn-print").addEventListener("click", () => window.print());
-
   el("btn-dpia").addEventListener("click", downloadDpia);
-
   el("btn-csv").addEventListener("click", () => {
     downloadBlob(buildRegisterCsv(), "text/csv;charset=utf-8", "AI-register-" + fileSlug() + ".csv");
   });
 
-  el("btn-letter-copy").addEventListener("click", async () => {
-    const text = buildLetterText();
-    const status = el("letter-status");
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        legacyCopy(text);
-      }
-    } catch (err) {
-      legacyCopy(text);
-    }
-    status.textContent = "Brieftekst gekopieerd naar het klembord.";
-    setTimeout(() => { status.textContent = ""; }, 4000);
-  });
-
   el("btn-letter-mail").addEventListener("click", () => {
     window.location.href = mailtoLetter();
+  });
+  el("btn-letter-copy").addEventListener("click", async () => {
+    await copyText(buildLetterText());
+    flashStatus("letter-status", "Tekst van de mail gekopieerd.");
   });
 
   el("btn-restart").addEventListener("click", restartTool);
   el("btn-restart-top").addEventListener("click", restartTool);
 }
 
-/* Terugval voor browsers zonder clipboard-API. */
 function legacyCopy(text) {
   const ta = document.createElement("textarea");
   ta.value = text;
@@ -1184,6 +1337,7 @@ function initApp() {
   initStart();
   initQuestionNav();
   initResultActions();
+  restoreFromHash();
 }
 if (document.readyState !== "loading") {
   initApp();

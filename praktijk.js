@@ -95,12 +95,12 @@ const PRAKTIJK_GROUPS = [
       {
         id: "fgBesluit",
         title: "FG-besluit gemotiveerd vastgelegd",
-        note: "Vuistregel van de Autoriteit Persoonsgegevens: bij grootschalige verwerking van gezondheidsgegevens (voor huisartsenpraktijken: meer dan 10.000 patiënten) is een FG verplicht. Daaronder in beginsel niet. Leg het besluit gemotiveerd vast en laat het bij twijfel toetsen.",
+        note: "Volgens de Autoriteit Persoonsgegevens moeten ziekenhuizen, zorggroepen en huisartsenposten altijd een FG hebben. Andere zorgaanbieders moeten dat als ze meer dan 10.000 patiënten ingeschreven hebben of gemiddeld meer dan 10.000 patiënten per jaar behandelen, en die gegevens in één systeem staan. Daaronder in beginsel niet. Leg het besluit gemotiveerd vast en laat het bij twijfel toetsen.",
       },
       {
         id: "friaCheck",
         title: "FRIA-afweging vastgelegd",
-        note: "De grondrechtentoets uit de AI Act (artikel 27) geldt voor bepaalde organisaties bij hoog-risico-AI; voor een reguliere huisartsenpraktijk in beginsel niet. Leg vast waarom die wel of niet nodig is en laat het bij twijfel toetsen.",
+        note: "De grondrechtentoets uit de AI Act (artikel 27) geldt voor bepaalde organisaties bij hoog-risico-AI; voor een reguliere eerstelijnspraktijk in beginsel niet. Leg vast waarom die wel of niet nodig is en laat het bij twijfel toetsen.",
       },
     ],
   },
